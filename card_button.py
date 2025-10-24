@@ -5,7 +5,7 @@ import subprocess
 WHITE_IMG = "./image/button/card_button_white.png"
 GRAY_IMG = "./image/button/card_button_gray.png"
 ORANGE_IMG = "./image/button/card_button_orange.png"
-TARGET_SCRIPT = "cards.py"
+TARGET_SCRIPT = "card.py"
 BG_COLOR = "#000000"
 SCALE = 0.52
 card_program = None
@@ -15,12 +15,12 @@ def toggle_cards(event=None):
     global card_program
     if card_program and card_program.poll() is None:
         label.config(image=photo_white)
-        print("🟥 close cards.py")
+        print("🟥 close card.py")
         card_program.terminate()
         card_program = None
     else:
         label.config(image=photo_orange)
-        print("🟩 open cards.py")
+        print("🟩 open card.py")
         card_program = subprocess.Popen(["python", TARGET_SCRIPT])
 
 
