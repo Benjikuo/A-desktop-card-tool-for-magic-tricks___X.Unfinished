@@ -6,7 +6,6 @@ BG_COLOR = "#09FF00"
 IMAGE_FOLDER = "image/card"
 CARD_SIZE = (74, 111)
 BOX_SIZE = (80, 120)
-BOX_POSITION = (260, 972)
 RIBBON_SPACING = 20  # 卡片間距
 WAVE_RANGE = 60  # 波浪影響範圍(像素)
 WAVE_HEIGHT = 15  # 波浪最大高度(像素)
@@ -256,14 +255,14 @@ class Card:
 
 
 # ✅ D 鍵：刪除當前選中的卡片
-def delete_focused(event=None):
+def delete(event=None):
     global focused_card
     if focused_card and focused_card.ready:
         focused_card.destroy()
 
 
 # ✅ F 鍵：翻轉當前選中的卡片
-def flip_focused(event=None):
+def flip(event=None):
     if focused_card and focused_card.ready:
         focused_card.flip_animated()
 
@@ -283,7 +282,7 @@ def flip_all(event=None):
 
 
 # ✅ Ctrl + D：刪除所有卡片（帶星星特效）
-def clear_all(event=None):
+def delete_all(event=None):
     global focused_card
     for item in canvas.find_withtag("card"):
         x, y = canvas.coords(item)
@@ -295,7 +294,7 @@ def clear_all(event=None):
 
 
 # ✅ Ctrl + R：重置所有卡片（無特效，回到初始狀態）
-def reset_all(event=None):
+def reset(event=None):
     global focused_card
     # 先標記所有卡片為已刪除,停止動畫
     for card in card_box.all_cards:
@@ -309,7 +308,7 @@ def reset_all(event=None):
 
 
 # ✅ Ctrl + S：緞帶展排
-def ribbon_spread(event=None):
+def spread(event=None):
     card_box.ribbon_spread()
 
 
@@ -383,6 +382,73 @@ def move_star(canvas, star, dx, dy, step):
     canvas.after(20, lambda: move_star(canvas, star, dx, dy, step + 1))
 
 
+def key_pressed(event):
+    key = event.keysym.lower()
+    ctrl = (event.state & 0x4) != 0  # 偵測 Ctrl 是否按下
+
+    # 無 Ctrl 的一般操作
+    if not ctrl:
+        if key == "w":
+            perfect_spread()
+        elif key == "e":
+            set_card()
+        elif key == "r":
+            reset()
+        elif key == "s":
+            spread()
+        elif key == "d":
+            delete()
+        elif key == "f":
+            flip()
+        elif key == "z":
+            spread()
+        elif key == "x":
+            spread()
+        elif key == "c":
+            spread()
+        elif key == "v":
+            spread()
+
+    # Ctrl 組合操作
+    else:
+        if key == "w":
+            perfect_spread_all()
+        elif key == "s":
+            spread_all()
+        elif key == "d":
+            delete_all()
+        elif key == "f":
+            flip_all()
+
+
+# w 全部排序緞帶展排
+# e 精確選牌
+# r 重置
+# s 混亂緞帶展排
+# d 刪除
+# f 翻轉
+# t 隨便拿一張
+# g 全部閃牌記憶
+# b 讀心術魔術 6張牌消失一張
+
+# ctrl + s 全部混亂緞帶展排
+# ctrl + d 全部刪除
+# ctrl + f 全部翻轉
+
+# z 黑桃排序緞帶展排
+# x 菱形排序緞帶展排
+# c 梅花排序緞帶展排
+# v 愛心排序緞帶展排
+
+# A 四張A
+# 1 四張A
+# 2 四張2
+# ...
+# J 四張J
+# Q 四張Q
+# K 四張K
+
+
 root = tk.Tk()
 root.overrideredirect(True)
 root.wm_attributes("-transparentcolor", BG_COLOR)
@@ -403,18 +469,11 @@ card_imgs = [
     if f.endswith(".png") and f not in ("case.png", "back.png")
 ]
 
-card_box = CardBox(
-    canvas, BOX_POSITION[0], BOX_POSITION[1], box_img, back_img, card_imgs
-)
+card_box = CardBox(canvas, screen_w / 2, screen_h / 2, box_img, back_img, card_imgs)
 
 canvas.bind("<Motion>", update_wave)
 canvas.bind("<Leave>", reset_wave)
 smooth_wave_animation()
 
-root.bind("f", flip_focused)
-root.bind("d", delete_focused)
-root.bind("<Control-f>", flip_all)
-root.bind("<Control-d>", clear_all)
-root.bind("<Control-r>", reset_all)
-root.bind("<Control-s>", ribbon_spread)
+root.bind("<Key>", key_pressed)
 root.mainloop()
