@@ -6,6 +6,7 @@ BG_COLOR = "#09FF00"
 IMAGE_FOLDER = "image/card"
 CARD_SIZE = (74, 111)
 BOX_SIZE = (80, 120)
+
 RIBBON_SPACING = 20  # 卡片間距
 WAVE_RANGE = 60  # 波浪影響範圍(像素)
 WAVE_HEIGHT = 15  # 波浪最大高度(像素)
@@ -388,11 +389,7 @@ def key_pressed(event):
 
     # 無 Ctrl 的一般操作
     if not ctrl:
-        if key == "w":
-            perfect_spread()
-        elif key == "e":
-            set_card()
-        elif key == "r":
+        if key == "r":
             reset()
         elif key == "s":
             spread()
@@ -411,11 +408,7 @@ def key_pressed(event):
 
     # Ctrl 組合操作
     else:
-        if key == "w":
-            perfect_spread_all()
-        elif key == "s":
-            spread_all()
-        elif key == "d":
+        if key == "d":
             delete_all()
         elif key == "f":
             flip_all()
@@ -469,7 +462,7 @@ card_imgs = [
     if f.endswith(".png") and f not in ("case.png", "back.png")
 ]
 
-card_box = CardBox(canvas, screen_w / 2, screen_h / 2, box_img, back_img, card_imgs)
+card_box = CardBox(canvas, screen_w / 2, screen_h - 108, box_img, back_img, card_imgs)
 
 canvas.bind("<Motion>", update_wave)
 canvas.bind("<Leave>", reset_wave)

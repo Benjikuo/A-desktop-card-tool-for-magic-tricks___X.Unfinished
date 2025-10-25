@@ -32,6 +32,15 @@ def press_out(event):
     toggle_cards()
 
 
+def check_card_program():
+    global card_program
+    if card_program and card_program.poll() is not None:
+        label.config(image=photo_white)
+        print("⬜ card.py is closed")
+        card_program = None
+    root.after(500, check_card_program)
+
+
 root = tk.Tk()
 root.overrideredirect(True)
 root.config(bg=BG_COLOR)
@@ -56,6 +65,8 @@ photo_orange = ImageTk.PhotoImage(img_orange)
 
 label = tk.Label(root, image=photo_white, bg=BG_COLOR, bd=0)
 label.pack()
+
+check_card_program()
 
 label.bind("<ButtonPress-1>", press_in)
 label.bind("<ButtonRelease-1>", press_out)
