@@ -7,6 +7,14 @@ IMAGE_FOLDER = "image/card"
 CARD_SIZE = (74, 111)
 BOX_SIZE = (80, 120)
 
+RIBBON_SPACING = 20
+WAVE_RANGE = 60
+WAVE_HEIGHT = 15
+WAVE_Y_THRESHOLD = 100
+RIBBON_RISE_HEIGHT = 150
+
+focused_card = None
+
 
 class CardBox:
     def __init__(self, canvas, x, y, box_img, back_img, card_imgs):
@@ -16,79 +24,104 @@ class CardBox:
         self.back_img = back_img
         self.card_imgs = card_imgs.copy()
         self.used_cards = set()
-        self.box_id = canvas.create_image(x, y, image=self.box_img, tags="box")
-        canvas.tag_bind(self.box_id, "<Button-1>", self.spawn_card)
+        self.all_cards = []
+
+        self.image_id = canvas.create_image(x, y, image=self.box_img, tags="box")
+        canvas.tag_bind(self.image_id, "<Button-1>", self.spawn_card)
 
     def spawn_card(self, event=None):
         available = [img for img in self.card_imgs if img not in self.used_cards]
         if not available:
+            print("⚠️ 所有卡片都已生成完畢！")
             return
         img = random.choice(available)
         self.used_cards.add(img)
-        Card(self.canvas, self.x, self.y - 150, self.back_img, img, self)
+        card = Card(self.canvas, self.x, self.y, self.back_img, img, self)
+        self.all_cards.append(card)
 
 
 class Card:
-    def __init__(self, canvas, x, y, back_img, front_img, box):
+    def __init__(
+        self,
+        canvas,
+        x,
+        y,
+        back_img,
+        front_img,
+        box,
+        skip_animation=False,
+        is_ribbon=False,
+    ):
         self.canvas = canvas
         self.back_img = back_img
         self.front_img = front_img
         self.box = box
         self.face_up = False
+        self.image_id = canvas.create_image(x, y, image=self.back_img, tags="card")
         self.flipping = False
-        self.interactable = False
+        self.ready = False
+        self.destroyed = False
+        self.is_ribbon = is_ribbon
+        self.base_x = x
+        self.base_y = y
+        self.target_y = y
+        self.touched = False
+        self.rising = False
         self._drag_data = {"x": 0, "y": 0, "moved": False}
-        self._start_pos = (0, 0)
-        self.this_card = canvas.create_image(
-            x, y + 50, image=self.back_img, tags="card"
-        )
-        self.animate_up(0)
-        self.canvas.tag_bind(self.this_card, "<ButtonPress-1>", self.start_drag)
-        self.canvas.tag_bind(self.this_card, "<B1-Motion>", self.on_drag)
-        self.canvas.tag_bind(self.this_card, "<ButtonRelease-1>", self.stop_drag)
+        self._press_pos = (0, 0)
+
+        if skip_animation:
+            self.ready = True
+            self.bind_events()
+        else:
+            self.animate_up(0)
 
     def animate_up(self, step):
-        if step < 10:
-            self.canvas.move(self.this_card, 0, -5)
-            self.canvas.after(20, lambda: self.animate_up(step + 1))
+        if self.destroyed:
+            return
+        if step < 18:
+            self.canvas.move(self.image_id, 0, -7)
+            self.canvas.after(15, lambda: self.animate_up(step + 1))
         else:
-            self.interactable = True
+            self.ready = True
+            self.bind_events()
+
+    def bind_events(self):
+        self.canvas.tag_bind(self.image_id, "<ButtonPress-1>", self.start_drag)
+        self.canvas.tag_bind(self.image_id, "<B1-Motion>", self.on_drag)
+        self.canvas.tag_bind(self.image_id, "<ButtonRelease-1>", self.stop_drag)
 
     def start_drag(self, event):
-        if not self.interactable:
+        global focused_card
+        if not self.ready:
             return
-
-        self._start_pos = (event.x, event.y)
-        self.card_start = self.canvas.coords(self.this_card)
+        focused_card = self
+        self._press_pos = (event.x, event.y)
         self._drag_data = {"x": event.x, "y": event.y, "moved": False}
-        self.canvas.tag_raise(self.this_card)
+        self.canvas.tag_raise(self.image_id)
 
     def on_drag(self, event):
-        if not self.interactable:
+        if not self.ready:
             return
-
-        dx = event.x - self._start_pos[0]
-        dy = event.y - self._start_pos[1]
+        dx = event.x - self._drag_data["x"]
+        dy = event.y - self._drag_data["y"]
         if abs(dx) > 2 or abs(dy) > 2:
-            self._moved = True
-        # 設定絕對位置（非相對移動）
-        self.canvas.coords(
-            self.this_card, self.card_start[0] + dx, self.card_start[1] + dy
-        )
+            self._drag_data["moved"] = True
+        self.canvas.move(self.image_id, dx, dy)
+        self._drag_data["x"] = event.x
+        self._drag_data["y"] = event.y
 
     def stop_drag(self, event):
-        if not self.interactable:
+        if not self.ready:
             return
-
-        dist = math.hypot(event.x - self._start_pos[0], event.y - self._start_pos[1])
+        dist = math.hypot(event.x - self._press_pos[0], event.y - self._press_pos[1])
         if dist < 5 and not self._drag_data["moved"]:
             self.flip_animated()
         self._drag_data = {"x": 0, "y": 0, "moved": False}
 
     def flip_animated(self, step=0):
-        if self.flipping or not self.interactable:
+        if self.flipping or not self.ready:
             return
-
         self.flipping = True
         total_steps = 10
         shrink_steps = total_steps // 2
@@ -106,12 +139,12 @@ class Card:
                 scale = 1 - (step / shrink_steps)
                 img = scale_image(scale)
                 self.tk_tmp = img
-                self.canvas.itemconfig(self.this_card, image=img)
+                self.canvas.itemconfig(self.image_id, image=img)
                 self.canvas.after(25, lambda: animate(step + 1))
             elif step == shrink_steps:
                 self.face_up = not self.face_up
                 self.canvas.itemconfig(
-                    self.this_card,
+                    self.image_id,
                     image=self.front_img if self.face_up else self.back_img,
                 )
                 self.canvas.after(25, lambda: animate(step + 1))
@@ -119,7 +152,7 @@ class Card:
                 scale = (step - shrink_steps) / shrink_steps
                 img = scale_image(scale)
                 self.tk_tmp = img
-                self.canvas.itemconfig(self.this_card, image=img)
+                self.canvas.itemconfig(self.image_id, image=img)
                 self.canvas.after(25, lambda: animate(step + 1))
             else:
                 self.flipping = False
@@ -128,18 +161,17 @@ class Card:
 
 
 def load_image(name, size):
-    return ImageTk.PhotoImage(Image.open(os.path.join(IMAGE_FOLDER, name)).resize(size))
+    place = os.path.join(IMAGE_FOLDER, name)
+    return ImageTk.PhotoImage(Image.open(place).resize(size))
 
 
 def key_pressed(event):
-    if event.keysym == "Escape":
-        root.destroy()
+    return
 
 
 root = tk.Tk()
 root.overrideredirect(True)
 root.wm_attributes("-transparentcolor", BG_COLOR)
-
 screen_w = root.winfo_screenwidth()
 screen_h = root.winfo_screenheight()
 root.geometry(f"{screen_w}x{screen_h}+0+0")
@@ -156,7 +188,7 @@ card_imgs = [
     if f.endswith(".png") and f not in ("box.png", "back.png")
 ]
 
-CardBox(canvas, screen_w / 2, screen_h - 108, box_img, back_img, card_imgs)
+card_box = CardBox(canvas, screen_w / 2, screen_h - 108, box_img, back_img, card_imgs)
 
 root.bind("<Key>", key_pressed)
 root.mainloop()

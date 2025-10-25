@@ -1,11 +1,4 @@
-import tkinter as tk
-from PIL import Image, ImageTk
-import os, random, math
-
-BG_COLOR = "#09FF00"
-IMAGE_FOLDER = "image/card"
-CARD_SIZE = (74, 111)
-BOX_SIZE = (80, 120)
+import random
 
 
 class CardBox:
@@ -125,38 +118,3 @@ class Card:
                 self.flipping = False
 
         animate(0)
-
-
-def load_image(name, size):
-    return ImageTk.PhotoImage(Image.open(os.path.join(IMAGE_FOLDER, name)).resize(size))
-
-
-def key_pressed(event):
-    if event.keysym == "Escape":
-        root.destroy()
-
-
-root = tk.Tk()
-root.overrideredirect(True)
-root.wm_attributes("-transparentcolor", BG_COLOR)
-
-screen_w = root.winfo_screenwidth()
-screen_h = root.winfo_screenheight()
-root.geometry(f"{screen_w}x{screen_h}+0+0")
-canvas = tk.Canvas(
-    root, width=screen_w, height=screen_h, bg=BG_COLOR, highlightthickness=0
-)
-canvas.pack(fill="both", expand=True)
-
-box_img = load_image("box.png", BOX_SIZE)
-back_img = load_image("back.png", CARD_SIZE)
-card_imgs = [
-    load_image(f, CARD_SIZE)
-    for f in os.listdir(IMAGE_FOLDER)
-    if f.endswith(".png") and f not in ("box.png", "back.png")
-]
-
-CardBox(canvas, screen_w / 2, screen_h - 108, box_img, back_img, card_imgs)
-
-root.bind("<Key>", key_pressed)
-root.mainloop()
