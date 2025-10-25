@@ -459,7 +459,7 @@ back_img = load_image(os.path.join(IMAGE_FOLDER, "back.png"), CARD_SIZE)
 card_imgs = [
     load_image(os.path.join(IMAGE_FOLDER, f), CARD_SIZE)
     for f in os.listdir(IMAGE_FOLDER)
-    if f.endswith(".png") and f not in ("case.png", "back.png")
+    if f.endswith(".png") and f not in ("boxpng", "back.png")
 ]
 
 card_box = CardBox(canvas, screen_w / 2, screen_h - 108, box_img, back_img, card_imgs)
