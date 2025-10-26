@@ -3,7 +3,7 @@ from PIL import Image, ImageTk
 import os, random, math
 
 BG_COLOR = "#09FF00"
-IMAGE_FOLDER = "image/card"
+CARD_FOLDER = "image/card"
 CARD_SIZE = (74, 111)
 BOX_SIZE = (80, 120)
 HANDLE_RADIUS = 20
@@ -87,7 +87,7 @@ class Draggable:
             self._on_right_click(event)
 
 
-class RibbonSpread:
+class Group:
     def __init__(self, canvas, cards, back_img, box):
         self.canvas = canvas
         self.cards = cards
@@ -160,7 +160,7 @@ class RibbonSpread:
         self._drag_data = {"x": 0, "y": 0}
 
 
-class CardBox(Draggable):
+class Box(Draggable):
     def __init__(self, canvas, x, y, box_img, back_img, card_imgs, card_filenames):
         super().__init__()
         self.initial_x = x
@@ -287,7 +287,7 @@ class CardBox(Draggable):
         screen_h = self.canvas.winfo_height()
         start_x = (screen_w - total_width) // 2 + CARD_SIZE[0] // 2
         start_y = screen_h // 2 + CARD_SIZE[1] // 2 + 30 + 50 + 1
-        ribbon = RibbonSpread(self.canvas, sorted_cards, self.back_img, self)
+        ribbon = Group(self.canvas, sorted_cards, self.back_img, self)
         ribbon.create(start_x, start_y)
         ribbon_spreads.append(ribbon)
 
@@ -315,7 +315,7 @@ class CardBox(Draggable):
         screen_h = self.canvas.winfo_height()
         start_x = (screen_w - total_width) // 2 + CARD_SIZE[0] // 2
         start_y = screen_h // 2 + CARD_SIZE[1] // 2 + 30 + 50 + 1
-        ribbon = RibbonSpread(self.canvas, sorted_cards, self.back_img, self)
+        ribbon = Group(self.canvas, sorted_cards, self.back_img, self)
         ribbon.create(start_x, start_y)
         ribbon_spreads.append(ribbon)
 
@@ -339,7 +339,7 @@ class CardBox(Draggable):
         screen_h = self.canvas.winfo_height()
         start_x = (screen_w - total_width) // 2 + CARD_SIZE[0] // 2
         start_y = screen_h // 2 + CARD_SIZE[1] // 2 + 30 + 50 + 1
-        ribbon = RibbonSpread(self.canvas, shuffled, self.back_img, self)
+        ribbon = Group(self.canvas, shuffled, self.back_img, self)
         ribbon.create(start_x, start_y)
         ribbon_spreads.append(ribbon)
 
@@ -450,7 +450,7 @@ class Card(Draggable):
             if step < shrink_steps:
                 scale = 1 - (step / shrink_steps)
                 img = scale_image(scale)
-                self.tk_tmp = img
+                self.tk_tmp = img  # type: ignore
                 self.canvas.itemconfig(self.image_id, image=img)
                 self.canvas.after(25, lambda: animate(step + 1))
             elif step == shrink_steps:
@@ -464,7 +464,7 @@ class Card(Draggable):
             elif step <= total_steps:
                 scale = (step - shrink_steps) / shrink_steps
                 img = scale_image(scale)
-                self.tk_tmp = img
+                self.tk_tmp = img  # type: ignore
                 self.canvas.itemconfig(self.image_id, image=img)
                 self.canvas.after(25, lambda: animate(step + 1))
             else:
@@ -531,82 +531,6 @@ def reset(event=None):
     card_box.all_cards.clear()
     ribbon_spreads.clear()
     focused_card = None
-
-
-def spread(event=None):
-    card_box.ribbon_spread()
-
-
-def spread_sorted(event=None):
-    card_box.ribbon_spread_sorted()
-
-
-def spread_spade(event=None):
-    card_box.ribbon_spread_by_suit("spade")
-
-
-def spread_diamond(event=None):
-    card_box.ribbon_spread_by_suit("diamond")
-
-
-def spread_club(event=None):
-    card_box.ribbon_spread_by_suit("club")
-
-
-def spread_heart(event=None):
-    card_box.ribbon_spread_by_suit("heart")
-
-
-def spawn_rank_1(event=None):
-    card_box.spawn_cards_by_rank(1)
-
-
-def spawn_rank_2(event=None):
-    card_box.spawn_cards_by_rank(2)
-
-
-def spawn_rank_3(event=None):
-    card_box.spawn_cards_by_rank(3)
-
-
-def spawn_rank_4(event=None):
-    card_box.spawn_cards_by_rank(4)
-
-
-def spawn_rank_5(event=None):
-    card_box.spawn_cards_by_rank(5)
-
-
-def spawn_rank_6(event=None):
-    card_box.spawn_cards_by_rank(6)
-
-
-def spawn_rank_7(event=None):
-    card_box.spawn_cards_by_rank(7)
-
-
-def spawn_rank_8(event=None):
-    card_box.spawn_cards_by_rank(8)
-
-
-def spawn_rank_9(event=None):
-    card_box.spawn_cards_by_rank(9)
-
-
-def spawn_rank_10(event=None):
-    card_box.spawn_cards_by_rank(10)
-
-
-def spawn_rank_11(event=None):
-    card_box.spawn_cards_by_rank(11)
-
-
-def spawn_rank_12(event=None):
-    card_box.spawn_cards_by_rank(12)
-
-
-def spawn_rank_13(event=None):
-    card_box.spawn_cards_by_rank(13)
 
 
 def spawn_random_card(event=None):
@@ -696,75 +620,71 @@ def reset_wave(event=None):
             card.target_y = card.base_y
 
 
-# def star_effect(canvas, x, y, count=15):
-#     stars = []
-#     for _ in range(count):
-#         dx, dy = random.randint(-40, 40), random.randint(-40, 40)
-#         star = canvas.create_text(
-#             x,
-#             y,
-#             text="✦",
-#             fill=random.choice(["#FFD700", "#FFCC33", "#FFFF99"]),
-#             font=("Arial", 10),
-#         )
-#         stars.append(star)
-#         move_star(canvas, star, dx, dy, 0)
-#     canvas.after(1000, lambda: [canvas.delete(s) for s in stars])
+def star_effect(canvas, x, y, count=15):
+    stars = []
+    for _ in range(count):
+        dx, dy = random.randint(-40, 40), random.randint(-40, 40)
+        star = canvas.create_text(
+            x,
+            y,
+            text="✦",
+            fill=random.choice(["#FFD700", "#FFCC33", "#FFFF99"]),
+            font=("Arial", 10),
+        )
+        stars.append(star)
+        move_star(canvas, star, dx, dy, 0)
+    canvas.after(1000, lambda: [canvas.delete(s) for s in stars])
 
 
-# def move_star(canvas, star, dx, dy, step):
-#     canvas.move(star, dx / (10 + step * 2), dy / (10 + step * 2))
-#     canvas.after(20, lambda: move_star(canvas, star, dx, dy, step + 1))
-
-
-# def key_pressed(event):
-#     key = event.keysym.lower()
-#     ctrl = (event.state & 0x4) != 0
-#     shortcuts = {
-#         "r": reset,
-#         "s": spread,
-#         "w": spread_sorted,
-#         "t": spawn_random_card,
-#         "g": flash_memory,
-#         "b": mind_reading_trick,
-#         "d": delete,
-#         "f": flip,
-#         "z": spread_spade,
-#         "x": spread_diamond,
-#         "c": spread_club,
-#         "v": spread_heart,
-#         "a": lambda: card_box.spawn_cards_by_rank(1),
-#         "j": lambda: card_box.spawn_cards_by_rank(11),
-#         "k": lambda: card_box.spawn_cards_by_rank(13),
-#         "q": lambda: card_box.spawn_cards_by_rank(12),
-#         "1": lambda: card_box.spawn_cards_by_rank(1),
-#         "2": lambda: card_box.spawn_cards_by_rank(2),
-#         "3": lambda: card_box.spawn_cards_by_rank(3),
-#         "4": lambda: card_box.spawn_cards_by_rank(4),
-#         "5": lambda: card_box.spawn_cards_by_rank(5),
-#         "6": lambda: card_box.spawn_cards_by_rank(6),
-#         "7": lambda: card_box.spawn_cards_by_rank(7),
-#         "8": lambda: card_box.spawn_cards_by_rank(8),
-#         "9": lambda: card_box.spawn_cards_by_rank(9),
-#         "0": lambda: card_box.spawn_cards_by_rank(10),
-#     }
-#     ctrl_shortcuts = {
-#         "d": delete_all,
-#         "f": flip_all,
-#         "s": spread,
-#     }
-#     func = (ctrl_shortcuts if ctrl else shortcuts).get(key)
-#     if func:
-#         func()
+def move_star(canvas, star, dx, dy, step):
+    canvas.move(star, dx / (10 + step * 2), dy / (10 + step * 2))
+    canvas.after(20, lambda: move_star(canvas, star, dx, dy, step + 1))
 
 
 def load_image(name, size):
-    place = os.path.join(IMAGE_FOLDER, name)
+    place = os.path.join(CARD_FOLDER, name)
     return ImageTk.PhotoImage(Image.open(place).resize(size))
 
 
 def key_pressed(event=None):
-    return
+    key = event.keysym.lower()
+    ctrl = (event.state & 0x4) != 0
+
+    shortcuts = {
+        "r": reset,
+        "s": spread,
+        "w": spread_sorted,
+        "t": spawn_random_card,
+        "g": flash_memory,
+        "b": mind_reading_trick,
+        "d": delete,
+        "f": flip,
+        "z": spread_spade,
+        "x": spread_diamond,
+        "c": spread_club,
+        "v": spread_heart,
+        "1": lambda: card_box.spawn_cards_by_rank(1),
+        "2": lambda: card_box.spawn_cards_by_rank(2),
+        "3": lambda: card_box.spawn_cards_by_rank(3),
+        "4": lambda: card_box.spawn_cards_by_rank(4),
+        "5": lambda: card_box.spawn_cards_by_rank(5),
+        "6": lambda: card_box.spawn_cards_by_rank(6),
+        "7": lambda: card_box.spawn_cards_by_rank(7),
+        "8": lambda: card_box.spawn_cards_by_rank(8),
+        "9": lambda: card_box.spawn_cards_by_rank(9),
+        "0": lambda: card_box.spawn_cards_by_rank(10),
+        "j": lambda: card_box.spawn_cards_by_rank(11),
+        "q": lambda: card_box.spawn_cards_by_rank(12),
+        "k": lambda: card_box.spawn_cards_by_rank(13),
+    }
+    ctrl_shortcuts = {
+        "d": delete_all,
+        "f": flip_all,
+        "s": spread,
+    }
+    func = (ctrl_shortcuts if ctrl else shortcuts).get(key)
+    if func:
+        func()
 
 
 root = tk.Tk()
@@ -783,11 +703,19 @@ box_img = load_image("box.png", BOX_SIZE)
 back_img = load_image("back.png", CARD_SIZE)
 card_imgs = [
     load_image(f, CARD_SIZE)
-    for f in os.listdir(IMAGE_FOLDER)
+    for f in os.listdir(CARD_FOLDER)
     if f.endswith(".png") and f not in ("box.png", "back.png")
 ]
 
-CardBox(canvas, screen_w / 2, screen_h - 108, box_img, back_img, card_imgs)
+card_filenames = [
+    f
+    for f in os.listdir(CARD_FOLDER)
+    if f.endswith(".png") and f not in ("box.png", "back.png")
+]
+
+card_box = Box(
+    canvas, screen_w / 2, screen_h - 108, box_img, back_img, card_imgs, card_filenames
+)
 
 # canvas.bind("<Motion>", update_wave)
 # canvas.bind("<Leave>", reset_wave)

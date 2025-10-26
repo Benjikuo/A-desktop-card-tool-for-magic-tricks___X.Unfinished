@@ -16,7 +16,7 @@ RIBBON_RISE_HEIGHT = 150
 focused_card = None
 
 
-class CardBox:
+class Box:
     def __init__(self, canvas, x, y, box_img, back_img, card_imgs):
         self.canvas = canvas
         self.x, self.y = x, y
@@ -166,7 +166,38 @@ def load_image(name, size):
 
 
 def key_pressed(event):
-    return
+    k = event.keysym.lower()
+
+    # actions = {
+    #     "s": card_box.spread,
+    #     "w": card_box.spread_sorted,
+    #     "d": card_box.delete,
+    #     "f": card_box.flash_all_cards,
+    # }
+    # suit_map = {"z": "spade", "x": "diamond", "c": "club", "v": "heart"}
+    # value_map = {
+    #     "a": 1,
+    #     "1": 1,
+    #     "2": 2,
+    #     "3": 3,
+    #     "4": 4,
+    #     "5": 5,
+    #     "6": 6,
+    #     "7": 7,
+    #     "8": 8,
+    #     "9": 9,
+    #     "0": 10,
+    #     "j": 11,
+    #     "q": 12,
+    #     "k": 13,
+    # }
+
+    # if k in actions:
+    #     actions[k]()
+    # if k in suit_map:
+    #     card_box.spread_suit(suit_map[k])
+    # if k in value_map:
+    #     card_box.spread_value(value_map[k])
 
 
 root = tk.Tk()
@@ -188,7 +219,7 @@ card_imgs = [
     if f.endswith(".png") and f not in ("box.png", "back.png")
 ]
 
-card_box = CardBox(canvas, screen_w / 2, screen_h - 108, box_img, back_img, card_imgs)
+card_box = Box(canvas, screen_w / 2, screen_h - 108, box_img, back_img, card_imgs)
 
 root.bind("<Key>", key_pressed)
 root.mainloop()
