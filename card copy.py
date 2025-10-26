@@ -6,6 +6,7 @@ BG_COLOR = "#00FF00"
 CARD_FOLDER = "image/card"
 CARD_SIZE = (74, 111)
 BOX_SIZE = (80, 120)
+
 HANDLE_RADIUS = 20
 
 RIBBON_SPACING = 20
@@ -226,7 +227,7 @@ class Box(Draggable):
                 rank = 0
         return (suit, rank)
 
-    def spawn_cards_by_rank(self, rank):
+    def spawn_cards_by_value(self, rank):
         available = [img for img in self.card_imgs if img not in self.used_cards]
         if not available:
             print("⚠️ 所有卡片都已生成完畢！")
@@ -507,12 +508,12 @@ def flip_all(event=None):
 
 def delete_all(event=None):
     global focused_card
-    for item in canvas.find_withtag("card"):
-        x, y = canvas.coords(item)
-        star_effect(canvas, x, y)
-        canvas.delete(item)
-    for item in canvas.find_withtag("ribbon_handle"):
-        canvas.delete(item)
+    for item in canva.find_withtag("card"):
+        x, y = canva.coords(item)
+        star_effect(canva, x, y)
+        canva.delete(item)
+    for item in canva.find_withtag("ribbon_handle"):
+        canva.delete(item)
     card_box.used_cards.clear()
     card_box.all_cards.clear()
     ribbon_spreads.clear()
@@ -523,10 +524,10 @@ def reset(event=None):
     global focused_card
     for card in card_box.all_cards:
         card.destroyed = True
-    for item in canvas.find_withtag("card"):
-        canvas.delete(item)
-    for item in canvas.find_withtag("ribbon_handle"):
-        canvas.delete(item)
+    for item in canva.find_withtag("card"):
+        canva.delete(item)
+    for item in canva.find_withtag("ribbon_handle"):
+        canva.delete(item)
     card_box.used_cards.clear()
     card_box.all_cards.clear()
     ribbon_spreads.clear()
@@ -563,7 +564,7 @@ def flash_memory(event=None):
             if not card.destroyed:
                 card.flip_animated()
 
-    canvas.after(1500, flip_back)
+    canva.after(1500, flip_back)
 
 
 def mind_reading_trick(event=None):
@@ -581,7 +582,18 @@ def mind_reading_trick(event=None):
         if not victim.destroyed:
             victim.destroy()
 
-    canvas.after(2000, hide_one)
+    canva.after(2000, hide_one)
+
+
+def spread_wave():
+    for card in card_box.all_cards:
+        if card.is_ribbon and not card.touched and card.ready and not card.destroyed:
+            current_x, current_y = canva.coords(card.image_id)
+            diff = card.target_y - current_y
+            if abs(diff) > 0.5:
+                new_y = current_y + diff * 0.3
+                canva.coords(card.image_id, current_x, new_y)
+    canva.after(16, spread_wave)
 
 
 def update_wave(event):
@@ -601,17 +613,6 @@ def update_wave(event):
                     card.target_y = card.base_y - offset
                 else:
                     card.target_y = card.base_y
-
-
-def smooth_wave_animation():
-    for card in card_box.all_cards:
-        if card.is_ribbon and not card.touched and card.ready and not card.destroyed:
-            current_x, current_y = canvas.coords(card.image_id)
-            diff = card.target_y - current_y
-            if abs(diff) > 0.5:
-                new_y = current_y + diff * 0.3
-                canvas.coords(card.image_id, current_x, new_y)
-    canvas.after(16, smooth_wave_animation)
 
 
 def reset_wave(event=None):
@@ -646,69 +647,52 @@ def load_image(name, size):
     return ImageTk.PhotoImage(Image.open(place).resize(size))
 
 
-def spread(event=None):
-    card_box.ribbon_spread()
-
-
-def spread_sorted(event=None):
-    card_box.ribbon_spread_sorted()
-
-
-def spread_spade(event=None):
-    card_box.ribbon_spread_by_suit("spade")
-
-
-def spread_diamond(event=None):
-    card_box.ribbon_spread_by_suit("diamond")
-
-
-def spread_club(event=None):
-    card_box.ribbon_spread_by_suit("club")
-
-
-def spread_heart(event=None):
-    card_box.ribbon_spread_by_suit("heart")
-
-
 def key_pressed(event):
     key = event.keysym.lower()
     ctrl = (event.state & 0x4) != 0
 
+    # sortcut
     shortcuts = {
+        "w": card_box.ribbon_spread_sorted,
+        "s": card_box.ribbon_spread,
         "r": reset,
-        "s": spread,
-        "w": spread_sorted,
         "t": spawn_random_card,
-        "g": flash_memory,
-        "b": mind_reading_trick,
         "d": delete,
         "f": flip,
-        "z": spread_spade,
-        "x": spread_diamond,
-        "c": spread_club,
-        "v": spread_heart,
-        "1": lambda: card_box.spawn_cards_by_rank(1),
-        "2": lambda: card_box.spawn_cards_by_rank(2),
-        "3": lambda: card_box.spawn_cards_by_rank(3),
-        "4": lambda: card_box.spawn_cards_by_rank(4),
-        "5": lambda: card_box.spawn_cards_by_rank(5),
-        "6": lambda: card_box.spawn_cards_by_rank(6),
-        "7": lambda: card_box.spawn_cards_by_rank(7),
-        "8": lambda: card_box.spawn_cards_by_rank(8),
-        "9": lambda: card_box.spawn_cards_by_rank(9),
-        "0": lambda: card_box.spawn_cards_by_rank(10),
-        "j": lambda: card_box.spawn_cards_by_rank(11),
-        "q": lambda: card_box.spawn_cards_by_rank(12),
-        "k": lambda: card_box.spawn_cards_by_rank(13),
     }
     ctrl_shortcuts = {
         "d": delete_all,
         "f": flip_all,
-        "s": spread,
+        "s": card_box.ribbon_spread,
     }
     func = (ctrl_shortcuts if ctrl else shortcuts).get(key)
     if func:
         func()
+        return
+
+    # suit group
+    suit_map = {"z": "spade", "x": "diamond", "c": "club", "v": "heart"}
+    if key in suit_map:
+        card_box.ribbon_spread_by_suit(suit_map[key])
+        return
+
+    # value group
+    value = None
+    if key == "a":
+        value = 1
+    elif key == "0":
+        value = 10
+    elif key == "j":
+        value = 11
+    elif key == "q":
+        value = 12
+    elif key == "k":
+        value = 13
+    elif key.isdigit():
+        value = int(key)
+
+    if value:
+        card_box.spawn_cards_by_value(value)
 
 
 root = tk.Tk()
@@ -718,10 +702,10 @@ root.wm_attributes("-transparentcolor", BG_COLOR)
 screen_w = root.winfo_screenwidth()
 screen_h = root.winfo_screenheight()
 root.geometry(f"{screen_w}x{screen_h}+0+0")
-canvas = tk.Canvas(
+canva = tk.Canvas(
     root, width=screen_w, height=screen_h, bg=BG_COLOR, highlightthickness=0
 )
-canvas.pack(fill="both", expand=True)
+canva.pack(fill="both", expand=True)
 
 box_img = load_image("box.png", BOX_SIZE)
 back_img = load_image("back.png", CARD_SIZE)
@@ -738,12 +722,12 @@ card_filenames = [
 ]
 
 card_box = Box(
-    canvas, screen_w / 2, screen_h - 108, box_img, back_img, card_imgs, card_filenames
+    canva, screen_w / 2, screen_h - 108, box_img, back_img, card_imgs, card_filenames
 )
 
-# canvas.bind("<Motion>", update_wave)
-# canvas.bind("<Leave>", reset_wave)
-# smooth_wave_animation()
-
+root.bind("<Motion>", update_wave)
+root.bind("<Leave>", reset_wave)
 root.bind("<Key>", key_pressed)
+
+spread_wave()
 root.mainloop()

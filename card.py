@@ -6,6 +6,7 @@ BG_COLOR = "#00FF00"
 CARD_FOLDER = "image/card"
 CARD_SIZE = (74, 111)
 BOX_SIZE = (80, 120)
+
 HANDLE_RADIUS = 20
 
 RIBBON_SPACING = 20
@@ -27,69 +28,31 @@ class Draggable:
         self._on_right_click = None
         self._on_drag_move = None
 
-    def setup_drag(self, canvas, image_id):
-        self.canvas = canvas
-        self.image_id = image_id
-        canvas.tag_bind(image_id, "<ButtonPress-1>", self._handle_left_press)
-        canvas.tag_bind(image_id, "<B1-Motion>", self._handle_drag)
-        canvas.tag_bind(image_id, "<ButtonRelease-1>", self._handle_left_release)
-        canvas.tag_bind(image_id, "<Button-2>", self._handle_middle_click)
-        canvas.tag_bind(image_id, "<Button-3>", self._handle_right_click)
+    def _start_drag_group(self, event):
+        self._drag_data = {"x": event.x, "y": event.y}
+        self.canva.tag_raise(self.handle_id)
 
-    def left_click(self, callback):
-        self._on_left_click = callback
-
-    def set_on_middle_click(self, callback):
-        self._on_middle_click = callback
-
-    def set_on_right_click(self, callback):
-        self._on_right_click = callback
-
-    def set_on_drag_move(self, callback):
-        self._on_drag_move = callback
-
-    def _handle_left_press(self, event):
-        self._drag_data = {
-            "x": event.x,
-            "y": event.y,
-            "start_x": event.x,
-            "start_y": event.y,
-            "moved": False,
-        }
-        self.canvas.tag_raise(self.image_id)
-
-    def _handle_drag(self, event):
+    def _drag_group(self, event):
         dx = event.x - self._drag_data["x"]
         dy = event.y - self._drag_data["y"]
-        if abs(dx) > 2 or abs(dy) > 2:
-            self._drag_data["moved"] = True
-        self.canvas.move(self.image_id, dx, dy)
-        self._drag_data["x"] = event.x
-        self._drag_data["y"] = event.y
-        if self._on_drag_move:
-            self._on_drag_move(dx, dy)
+        self.canva.move(self.handle_id, dx, dy)
+        self.handle_x += dx
+        self.handle_y += dy
+        for card in self.card_objects:
+            if not card.destroyed:
+                self.canva.move(card.image_id, dx, dy)
+                card.base_x += dx
+                card.base_y += dy
+                card.target_y += dy
+        self._drag_data = {"x": event.x, "y": event.y}
 
-    def _handle_left_release(self, event):
-        dist = math.hypot(
-            event.x - self._drag_data["start_x"], event.y - self._drag_data["start_y"]
-        )
-        if dist < 5 and not self._drag_data["moved"]:
-            if self._on_left_click:
-                self._on_left_click(event)
-        self._drag_data = {"x": 0, "y": 0, "start_x": 0, "start_y": 0, "moved": False}
-
-    def _handle_middle_click(self, event):
-        if self._on_middle_click:
-            self._on_middle_click(event)
-
-    def _handle_right_click(self, event):
-        if self._on_right_click:
-            self._on_right_click(event)
+    def _stop_drag_group(self, event):
+        self._drag_data = {"x": 0, "y": 0}
 
 
 class Group:
-    def __init__(self, canvas, cards, back_img, box):
-        self.canvas = canvas
+    def __init__(self, canva, cards, back_img, box):
+        self.canva = canva
         self.cards = cards
         self.back_img = back_img
         self.box = box
@@ -102,7 +65,7 @@ class Group:
     def create(self, start_x, start_y):
         self.handle_x = start_x - CARD_SIZE[0] // 2 - HANDLE_RADIUS - 10
         self.handle_y = start_y
-        self.handle_id = self.canvas.create_oval(
+        self.handle_id = self.canva.create_oval(
             self.handle_x - HANDLE_RADIUS,
             self.handle_y - HANDLE_RADIUS,
             self.handle_x + HANDLE_RADIUS,
@@ -112,21 +75,21 @@ class Group:
             width=3,
             tags="ribbon_handle",
         )
-        self.canvas.tag_bind(self.handle_id, "<ButtonPress-1>", self._start_drag_group)
-        self.canvas.tag_bind(self.handle_id, "<B1-Motion>", self._drag_group)
-        self.canvas.tag_bind(self.handle_id, "<ButtonRelease-1>", self._stop_drag_group)
+        self.canva.tag_bind(self.handle_id, "<ButtonPress-1>", self._start_drag_group)
+        self.canva.tag_bind(self.handle_id, "<B1-Motion>", self._drag_group)
+        self.canva.tag_bind(self.handle_id, "<ButtonRelease-1>", self._stop_drag_group)
         for i, img in enumerate(self.cards):
             x = start_x + i * RIBBON_SPACING
             y = start_y
             delay = i * 50
-            self.canvas.after(
+            self.canva.after(
                 delay, lambda img=img, x=x, y=y: self._spawn_card(img, x, y)
             )
 
     def _spawn_card(self, img, x, y):
         self.box.used_cards.add(img)
         card = Card(
-            self.canvas,
+            self.canva,
             x,
             y,
             self.back_img,
@@ -137,62 +100,6 @@ class Group:
         )
         self.card_objects.append(card)
         self.box.all_cards.append(card)
-
-    def _start_drag_group(self, event):
-        self._drag_data = {"x": event.x, "y": event.y}
-        self.canvas.tag_raise(self.handle_id)
-
-    def _drag_group(self, event):
-        dx = event.x - self._drag_data["x"]
-        dy = event.y - self._drag_data["y"]
-        self.canvas.move(self.handle_id, dx, dy)
-        self.handle_x += dx
-        self.handle_y += dy
-        for card in self.card_objects:
-            if not card.destroyed:
-                self.canvas.move(card.image_id, dx, dy)
-                card.base_x += dx
-                card.base_y += dy
-                card.target_y += dy
-        self._drag_data = {"x": event.x, "y": event.y}
-
-    def _stop_drag_group(self, event):
-        self._drag_data = {"x": 0, "y": 0}
-
-
-class Box(Draggable):
-    def __init__(self, canvas, x, y, box_img, back_img, card_imgs, card_filenames):
-        super().__init__()
-        self.initial_x = x
-        self.initial_y = y
-        self.x, self.y = x, y
-        self.box_img = box_img
-        self.back_img = back_img
-        self.card_imgs = card_imgs.copy()
-        self.card_filenames = card_filenames.copy()
-        self.used_cards = set()
-        self.all_cards = []
-        self.image_id = canvas.create_image(x, y, image=self.box_img, tags="box")
-        self.setup_drag(canvas, self.image_id)
-        self.left_click(self.spawn_card)
-        self.set_on_middle_click(self.reset_position)
-
-    def reset_position(self, event=None):
-        current_x, current_y = self.canvas.coords(self.image_id)
-        self.canvas.move(
-            self.image_id, self.initial_x - current_x, self.initial_y - current_y
-        )
-
-    def spawn_card(self, event=None):
-        available = [img for img in self.card_imgs if img not in self.used_cards]
-        if not available:
-            print("⚠️ 所有卡片都已生成完畢！")
-            return
-        img = random.choice(available)
-        self.used_cards.add(img)
-        box_coords = self.canvas.coords(self.image_id)
-        card = Card(self.canvas, box_coords[0], box_coords[1], self.back_img, img, self)
-        self.all_cards.append(card)
 
     def get_filename_for_img(self, img):
         img_str = str(img)
@@ -226,7 +133,7 @@ class Box(Draggable):
                 rank = 0
         return (suit, rank)
 
-    def spawn_cards_by_rank(self, rank):
+    def spawn_cards_by_value(self, rank):
         available = [img for img in self.card_imgs if img not in self.used_cards]
         if not available:
             print("⚠️ 所有卡片都已生成完畢！")
@@ -251,21 +158,21 @@ class Box(Draggable):
             return
         sorted_cards = sorted(filtered, key=self.get_card_sort_key)
         total_width = CARD_SIZE[0] + (len(sorted_cards) - 1) * SIMPLE_SPACING
-        screen_w = self.canvas.winfo_width()
-        screen_h = self.canvas.winfo_height()
+        screen_w = self.canva.winfo_width()
+        screen_h = self.canva.winfo_height()
         start_x = (screen_w - total_width) // 2 + CARD_SIZE[0] // 2
         start_y = screen_h // 2 + CARD_SIZE[1] // 2 + 30 + 50 + 1
         for i, img in enumerate(sorted_cards):
             x = start_x + i * SIMPLE_SPACING
             y = start_y
             delay = i * 100
-            self.canvas.after(
+            self.canva.after(
                 delay, lambda img=img, x=x, y=y: self._spawn_simple_card(img, x, y)
             )
 
     def _spawn_simple_card(self, img, x, y):
         self.used_cards.add(img)
-        card = Card(self.canvas, x, y, self.back_img, img, self, skip_animation=True)
+        card = Card(self.canva, x, y, self.back_img, img, self, skip_animation=True)
         self.all_cards.append(card)
 
     def ribbon_spread_sorted(self):
@@ -283,11 +190,11 @@ class Box(Draggable):
             return
         sorted_cards = sorted(filtered, key=self.get_card_sort_key)
         total_width = CARD_SIZE[0] + (len(sorted_cards) - 1) * RIBBON_SPACING
-        screen_w = self.canvas.winfo_width()
-        screen_h = self.canvas.winfo_height()
+        screen_w = self.canva.winfo_width()
+        screen_h = self.canva.winfo_height()
         start_x = (screen_w - total_width) // 2 + CARD_SIZE[0] // 2
         start_y = screen_h // 2 + CARD_SIZE[1] // 2 + 30 + 50 + 1
-        ribbon = Group(self.canvas, sorted_cards, self.back_img, self)
+        ribbon = Group(self.canva, sorted_cards, self.back_img, self)
         ribbon.create(start_x, start_y)
         ribbon_spreads.append(ribbon)
 
@@ -311,11 +218,11 @@ class Box(Draggable):
             return
         sorted_cards = sorted(filtered, key=lambda img: self.get_card_sort_key(img)[1])
         total_width = CARD_SIZE[0] + (len(sorted_cards) - 1) * RIBBON_SPACING
-        screen_w = self.canvas.winfo_width()
-        screen_h = self.canvas.winfo_height()
+        screen_w = self.canva.winfo_width()
+        screen_h = self.canva.winfo_height()
         start_x = (screen_w - total_width) // 2 + CARD_SIZE[0] // 2
         start_y = screen_h // 2 + CARD_SIZE[1] // 2 + 30 + 50 + 1
-        ribbon = Group(self.canvas, sorted_cards, self.back_img, self)
+        ribbon = Group(self.canva, sorted_cards, self.back_img, self)
         ribbon.create(start_x, start_y)
         ribbon_spreads.append(ribbon)
 
@@ -335,19 +242,54 @@ class Box(Draggable):
         shuffled = filtered.copy()
         random.shuffle(shuffled)
         total_width = CARD_SIZE[0] + (len(shuffled) - 1) * RIBBON_SPACING
-        screen_w = self.canvas.winfo_width()
-        screen_h = self.canvas.winfo_height()
+        screen_w = self.canva.winfo_width()
+        screen_h = self.canva.winfo_height()
         start_x = (screen_w - total_width) // 2 + CARD_SIZE[0] // 2
         start_y = screen_h // 2 + CARD_SIZE[1] // 2 + 30 + 50 + 1
-        ribbon = Group(self.canvas, shuffled, self.back_img, self)
+        ribbon = Group(self.canva, shuffled, self.back_img, self)
         ribbon.create(start_x, start_y)
         ribbon_spreads.append(ribbon)
+
+
+class Box(Draggable):
+    def __init__(self, canva, x, y, box_img, back_img, card_imgs, card_filenames):
+        super().__init__()
+        self.initial_x = x
+        self.initial_y = y
+        self.x, self.y = x, y
+        self.box_img = box_img
+        self.back_img = back_img
+        self.card_imgs = card_imgs.copy()
+        self.card_filenames = card_filenames.copy()
+        self.used_cards = set()
+        self.all_cards = []
+        self.image_id = canva.create_image(x, y, image=self.box_img, tags="box")
+        self.setup_drag(canva, self.image_id)
+        self.left_click(self.spawn_card)
+        self.set_on_middle_click(self.reset_position)
+
+    def reset_position(self, event=None):
+        current_x, current_y = self.canva.coords(self.image_id)
+        self.canva.move(
+            self.image_id, self.initial_x - current_x, self.initial_y - current_y
+        )
+
+    def spawn_card(self, event=None):
+        available = [img for img in self.card_imgs if img not in self.used_cards]
+        if not available:
+            print("⚠️ 所有卡片都已生成完畢！")
+            return
+        img = random.choice(available)
+        self.used_cards.add(img)
+        box_coords = self.canva.coords(self.image_id)
+        card = Card(self.canva, box_coords[0], box_coords[1], self.back_img, img, self)
+        self.all_cards.append(card)
 
 
 class Card(Draggable):
     def __init__(
         self,
-        canvas,
+        canva,
         x,
         y,
         back_img,
@@ -361,9 +303,9 @@ class Card(Draggable):
         self.front_img = front_img
         self.box = box
         self.face_up = False
-        self.image_id = canvas.create_image(x, y, image=self.back_img, tags="card")
-        self.canvas = canvas
-        self.canvas.tag_lower(self.image_id, "box")
+        self.image_id = canva.create_image(x, y, image=self.back_img, tags="card")
+        self.canva = canva
+        self.canva.tag_lower(self.image_id, "box")
         self.flipping = False
         self.ready = False
         self.destroyed = False
@@ -383,21 +325,21 @@ class Card(Draggable):
         if self.destroyed:
             return
         if step < 18:
-            self.canvas.move(self.image_id, 0, -7)
-            self.canvas.after(15, lambda: self.animate_up(step + 1))
+            self.canva.move(self.image_id, 0, -7)
+            self.canva.after(15, lambda: self.animate_up(step + 1))
         else:
             self.ready = True
             self.bind_events()
 
     def bind_events(self):
-        self.setup_drag(self.canvas, self.image_id)
+        self.setup_drag(self.canva, self.image_id)
         self.left_click(self._handle_click)
-        self.set_on_middle_click(self.destroy)
+        self.set_on_middle_click(self.delete)
 
     def _handle_click(self, event):
         if not self.ready or self.rising:
             return
-        self.flip_animated()
+        self.flip()
 
     def _handle_left_press(self, event):
         global focused_card
@@ -408,12 +350,12 @@ class Card(Draggable):
             self.rising = True
             self.ribbon_rise()
             if not self.face_up:
-                self.canvas.after(300, self.flip_animated)
+                self.canva.after(300, self.flip)
         self.touched = True
         super()._handle_left_press(event)
 
     def ribbon_rise(self):
-        current_x, current_y = self.canvas.coords(self.image_id)
+        current_x, current_y = self.canva.coords(self.image_id)
         target_y = current_y - RIBBON_RISE_HEIGHT
         self._animate_rise(current_x, current_y, target_y, 0)
 
@@ -422,16 +364,16 @@ class Card(Draggable):
         if step < steps:
             progress = step / steps
             new_y = start_y + (target_y - start_y) * progress
-            current_x, _ = self.canvas.coords(self.image_id)
-            self.canvas.coords(self.image_id, current_x, new_y)
-            self.canvas.after(
+            current_x, _ = self.canva.coords(self.image_id)
+            self.canva.coords(self.image_id, current_x, new_y)
+            self.canva.after(
                 20, lambda: self._animate_rise(base_x, start_y, target_y, step + 1)
             )
         else:
             self.base_y = target_y
             self.rising = False
 
-    def flip_animated(self, step=0):
+    def flip(self, step=0):
         if self.flipping or not self.ready:
             return
         self.flipping = True
@@ -451,137 +393,47 @@ class Card(Draggable):
                 scale = 1 - (step / shrink_steps)
                 img = scale_image(scale)
                 self.tk_tmp = img  # type: ignore
-                self.canvas.itemconfig(self.image_id, image=img)
-                self.canvas.after(25, lambda: animate(step + 1))
+                self.canva.itemconfig(self.image_id, image=img)
+                self.canva.after(25, lambda: animate(step + 1))
             elif step == shrink_steps:
-                self.canvas.update_idletasks()
+                self.canva.update_idletasks()
                 self.face_up = not self.face_up
-                self.canvas.itemconfig(
+                self.canva.itemconfig(
                     self.image_id,
                     image=self.front_img if self.face_up else self.back_img,
                 )
-                self.canvas.after(25, lambda: animate(step + 1))
+                self.canva.after(25, lambda: animate(step + 1))
             elif step <= total_steps:
                 scale = (step - shrink_steps) / shrink_steps
                 img = scale_image(scale)
                 self.tk_tmp = img  # type: ignore
-                self.canvas.itemconfig(self.image_id, image=img)
-                self.canvas.after(25, lambda: animate(step + 1))
+                self.canva.itemconfig(self.image_id, image=img)
+                self.canva.after(25, lambda: animate(step + 1))
             else:
                 self.flipping = False
 
-    def destroy(self, event=None):
+    def delete(self, event=None):
         global focused_card
         if not self.ready or self.destroyed:
             return
         self.destroyed = True
-        x, y = self.canvas.coords(self.image_id)
-        star_effect(self.canvas, x, y)
-        self.canvas.delete(self.image_id)
+        x, y = self.canva.coords(self.image_id)
+        star_effect(self.canva, x, y)
+        self.canva.delete(self.image_id)
         self.box.used_cards.discard(self.front_img)
         if focused_card == self:
             focused_card = None
 
 
-def delete(event=None):
-    global focused_card
-    if focused_card and focused_card.ready:
-        focused_card.destroy()
-
-
-def flip(event=None):
-    if focused_card and focused_card.ready:
-        focused_card.flip_animated()
-
-
-def flip_all(event=None):
-    cards = [c for c in card_box.all_cards if c.ready and not c.destroyed]
-    if not cards:
-        return
-    all_face_up = all(c.face_up for c in cards)
-    target_state = not all_face_up
-    for card in cards:
-        if card.face_up != target_state:
-            card.flip_animated()
-
-
-def delete_all(event=None):
-    global focused_card
-    for item in canvas.find_withtag("card"):
-        x, y = canvas.coords(item)
-        star_effect(canvas, x, y)
-        canvas.delete(item)
-    for item in canvas.find_withtag("ribbon_handle"):
-        canvas.delete(item)
-    card_box.used_cards.clear()
-    card_box.all_cards.clear()
-    ribbon_spreads.clear()
-    focused_card = None
-
-
-def reset(event=None):
-    global focused_card
+def spread_wave():
     for card in card_box.all_cards:
-        card.destroyed = True
-    for item in canvas.find_withtag("card"):
-        canvas.delete(item)
-    for item in canvas.find_withtag("ribbon_handle"):
-        canvas.delete(item)
-    card_box.used_cards.clear()
-    card_box.all_cards.clear()
-    ribbon_spreads.clear()
-    focused_card = None
-
-
-def spawn_random_card(event=None):
-    available = [img for img in card_box.card_imgs if img not in card_box.used_cards]
-    if not available:
-        print("⚠️ 所有卡片都已生成完畢！")
-        return
-    img = random.choice(available)
-    card_box.used_cards.add(img)
-    screen_w = card_box.canvas.winfo_width()
-    screen_h = card_box.canvas.winfo_height()
-    x = screen_w // 2
-    y = screen_h // 2
-    card = Card(card_box.canvas, x, y, card_box.back_img, img, card_box)
-    card_box.all_cards.append(card)
-
-
-def flash_memory(event=None):
-    cards = [
-        c for c in card_box.all_cards if c.ready and not c.destroyed and not c.face_up
-    ]
-    if not cards:
-        print("⚠️ 沒有可以閃牌的卡片！")
-        return
-    for card in cards:
-        card.flip_animated()
-
-    def flip_back():
-        for card in cards:
-            if not card.destroyed:
-                card.flip_animated()
-
-    canvas.after(1500, flip_back)
-
-
-def mind_reading_trick(event=None):
-    cards = [c for c in card_box.all_cards if c.ready and not c.destroyed]
-    if len(cards) < 6:
-        print("⚠️ 至少需要6張牌！")
-        return
-    selected = random.sample(cards, 6)
-    for i, card in enumerate(selected):
-        if not card.face_up:
-            card.flip_animated()
-
-    def hide_one():
-        victim = random.choice(selected)
-        if not victim.destroyed:
-            victim.destroy()
-
-    canvas.after(2000, hide_one)
+        if card.is_ribbon and not card.touched and card.ready and not card.destroyed:
+            current_x, current_y = canva.coords(card.image_id)
+            diff = card.target_y - current_y
+            if abs(diff) > 0.5:
+                new_y = current_y + diff * 0.3
+                canva.coords(card.image_id, current_x, new_y)
+    canva.after(16, spread_wave)
 
 
 def update_wave(event):
@@ -603,28 +455,17 @@ def update_wave(event):
                     card.target_y = card.base_y
 
 
-def smooth_wave_animation():
-    for card in card_box.all_cards:
-        if card.is_ribbon and not card.touched and card.ready and not card.destroyed:
-            current_x, current_y = canvas.coords(card.image_id)
-            diff = card.target_y - current_y
-            if abs(diff) > 0.5:
-                new_y = current_y + diff * 0.3
-                canvas.coords(card.image_id, current_x, new_y)
-    canvas.after(16, smooth_wave_animation)
-
-
 def reset_wave(event=None):
     for card in card_box.all_cards:
         if card.is_ribbon and not card.touched and card.ready and not card.destroyed:
             card.target_y = card.base_y
 
 
-def star_effect(canvas, x, y, count=15):
+def star_effect(canva, x, y, count=15):
     stars = []
     for _ in range(count):
         dx, dy = random.randint(-40, 40), random.randint(-40, 40)
-        star = canvas.create_text(
+        star = canva.create_text(
             x,
             y,
             text="✦",
@@ -632,13 +473,52 @@ def star_effect(canvas, x, y, count=15):
             font=("Arial", 10),
         )
         stars.append(star)
-        move_star(canvas, star, dx, dy, 0)
-    canvas.after(1000, lambda: [canvas.delete(s) for s in stars])
+        move_star(canva, star, dx, dy, 0)
+    canva.after(1000, lambda: [canva.delete(s) for s in stars])
 
 
-def move_star(canvas, star, dx, dy, step):
-    canvas.move(star, dx / (10 + step * 2), dy / (10 + step * 2))
-    canvas.after(20, lambda: move_star(canvas, star, dx, dy, step + 1))
+def move_star(canva, star, dx, dy, step):
+    canva.move(star, dx / (10 + step * 2), dy / (10 + step * 2))
+    canva.after(20, lambda: move_star(canva, star, dx, dy, step + 1))
+
+
+def reset(event=None):
+    global focused_card
+    for card in card_box.all_cards:
+        card.destroyed = True
+    for item in canva.find_withtag("card"):
+        canva.delete(item)
+    for item in canva.find_withtag("ribbon_handle"):
+        canva.delete(item)
+    card_box.used_cards.clear()
+    card_box.all_cards.clear()
+    ribbon_spreads.clear()
+    focused_card = None
+
+
+def delete_all(event=None):
+    global focused_card
+    for item in canva.find_withtag("card"):
+        x, y = canva.coords(item)
+        star_effect(canva, x, y)
+        canva.delete(item)
+    for item in canva.find_withtag("ribbon_handle"):
+        canva.delete(item)
+    card_box.used_cards.clear()
+    card_box.all_cards.clear()
+    ribbon_spreads.clear()
+    focused_card = None
+
+
+def flip_all(event=None):
+    cards = [c for c in card_box.all_cards if c.ready and not c.destroyed]
+    if not cards:
+        return
+    all_face_up = all(c.face_up for c in cards)
+    target_state = not all_face_up
+    for card in cards:
+        if card.face_up != target_state:
+            card.flip_animated()
 
 
 def load_image(name, size):
@@ -646,69 +526,52 @@ def load_image(name, size):
     return ImageTk.PhotoImage(Image.open(place).resize(size))
 
 
-def spread(event=None):
-    card_box.ribbon_spread()
-
-
-def spread_sorted(event=None):
-    card_box.ribbon_spread_sorted()
-
-
-def spread_spade(event=None):
-    card_box.ribbon_spread_by_suit("spade")
-
-
-def spread_diamond(event=None):
-    card_box.ribbon_spread_by_suit("diamond")
-
-
-def spread_club(event=None):
-    card_box.ribbon_spread_by_suit("club")
-
-
-def spread_heart(event=None):
-    card_box.ribbon_spread_by_suit("heart")
-
-
 def key_pressed(event):
     key = event.keysym.lower()
     ctrl = (event.state & 0x4) != 0
 
+    # sortcut
     shortcuts = {
+        "w": card_box.ribbon_spread_sorted,
+        "s": card_box.ribbon_spread,
         "r": reset,
-        "s": spread,
-        "w": spread_sorted,
         "t": spawn_random_card,
-        "g": flash_memory,
-        "b": mind_reading_trick,
-        "d": delete,
+        "d": destroy,
         "f": flip,
-        "z": spread_spade,
-        "x": spread_diamond,
-        "c": spread_club,
-        "v": spread_heart,
-        "1": lambda: card_box.spawn_cards_by_rank(1),
-        "2": lambda: card_box.spawn_cards_by_rank(2),
-        "3": lambda: card_box.spawn_cards_by_rank(3),
-        "4": lambda: card_box.spawn_cards_by_rank(4),
-        "5": lambda: card_box.spawn_cards_by_rank(5),
-        "6": lambda: card_box.spawn_cards_by_rank(6),
-        "7": lambda: card_box.spawn_cards_by_rank(7),
-        "8": lambda: card_box.spawn_cards_by_rank(8),
-        "9": lambda: card_box.spawn_cards_by_rank(9),
-        "0": lambda: card_box.spawn_cards_by_rank(10),
-        "j": lambda: card_box.spawn_cards_by_rank(11),
-        "q": lambda: card_box.spawn_cards_by_rank(12),
-        "k": lambda: card_box.spawn_cards_by_rank(13),
     }
     ctrl_shortcuts = {
         "d": delete_all,
         "f": flip_all,
-        "s": spread,
+        "s": card_box.ribbon_spread,
     }
     func = (ctrl_shortcuts if ctrl else shortcuts).get(key)
     if func:
         func()
+        return
+
+    # suit group
+    suit_map = {"z": "spade", "x": "diamond", "c": "club", "v": "heart"}
+    if key in suit_map:
+        card_box.ribbon_spread_by_suit(suit_map[key])
+        return
+
+    # value group
+    value = None
+    if key == "a":
+        value = 1
+    elif key == "0":
+        value = 10
+    elif key == "j":
+        value = 11
+    elif key == "q":
+        value = 12
+    elif key == "k":
+        value = 13
+    elif key.isdigit():
+        value = int(key)
+
+    if value:
+        card_box.spawn_cards_by_value(value)
 
 
 root = tk.Tk()
@@ -718,10 +581,10 @@ root.wm_attributes("-transparentcolor", BG_COLOR)
 screen_w = root.winfo_screenwidth()
 screen_h = root.winfo_screenheight()
 root.geometry(f"{screen_w}x{screen_h}+0+0")
-canvas = tk.Canvas(
+canva = tk.Canvas(
     root, width=screen_w, height=screen_h, bg=BG_COLOR, highlightthickness=0
 )
-canvas.pack(fill="both", expand=True)
+canva.pack(fill="both", expand=True)
 
 box_img = load_image("box.png", BOX_SIZE)
 back_img = load_image("back.png", CARD_SIZE)
@@ -738,12 +601,12 @@ card_filenames = [
 ]
 
 card_box = Box(
-    canvas, screen_w / 2, screen_h - 108, box_img, back_img, card_imgs, card_filenames
+    canva, screen_w / 2, screen_h - 108, box_img, back_img, card_imgs, card_filenames
 )
 
-# canvas.bind("<Motion>", update_wave)
-# canvas.bind("<Leave>", reset_wave)
-# smooth_wave_animation()
-
+root.bind("<Motion>", update_wave)
+root.bind("<Leave>", reset_wave)
 root.bind("<Key>", key_pressed)
+
+spread_wave()
 root.mainloop()
