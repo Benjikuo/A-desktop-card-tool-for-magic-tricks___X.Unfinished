@@ -2,7 +2,7 @@ import tkinter as tk
 from PIL import Image, ImageTk
 import os, random, math
 
-BG_COLOR = "#09FF00"
+BG_COLOR = "#00FF00"
 CARD_FOLDER = "image/card"
 CARD_SIZE = (74, 111)
 BOX_SIZE = (80, 120)
@@ -646,7 +646,31 @@ def load_image(name, size):
     return ImageTk.PhotoImage(Image.open(place).resize(size))
 
 
-def key_pressed(event=None):
+def spread(event=None):
+    card_box.ribbon_spread()
+
+
+def spread_sorted(event=None):
+    card_box.ribbon_spread_sorted()
+
+
+def spread_spade(event=None):
+    card_box.ribbon_spread_by_suit("spade")
+
+
+def spread_diamond(event=None):
+    card_box.ribbon_spread_by_suit("diamond")
+
+
+def spread_club(event=None):
+    card_box.ribbon_spread_by_suit("club")
+
+
+def spread_heart(event=None):
+    card_box.ribbon_spread_by_suit("heart")
+
+
+def key_pressed(event):
     key = event.keysym.lower()
     ctrl = (event.state & 0x4) != 0
 
