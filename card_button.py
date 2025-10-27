@@ -21,7 +21,7 @@ def toggle_cards(event=None):
     else:
         label.config(image=photo_orange)
         print("🟩 open card.py")
-        card_program = subprocess.Popen(["python", TARGET_SCRIPT])
+        card_program = subprocess.Popen(["pythonw", TARGET_SCRIPT])
 
 
 def press_in(event):
