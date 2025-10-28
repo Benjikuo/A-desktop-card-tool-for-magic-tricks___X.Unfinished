@@ -24,10 +24,9 @@ class Drag:
     def __init__(self, canvas, x, y, item_name):
         self.canvas = canvas
         self.item = item_name
-        self.item_x = x
-        self.item_y = y
-        self.start_x = None
-        self.start_y = None
+        self.item_x, self.item_y = x, y
+        self.start_x, self.start_y = None, None
+        self.dx, self.dy = 0, 0
         self.moved = False
 
         self.canvas.tag_bind(self.item, "<Button-1>", self._start_drag)
@@ -35,21 +34,26 @@ class Drag:
         self.canvas.tag_bind(self.item, "<ButtonRelease-1>", self._stop_drag)
 
     def _start_drag(self, event):
-        self.start_x = event.x
-        self.start_y = event.y
+        self.start_x, self.start_y = event.x, event.y
 
     def _on_drag(self, event):
-        dx = event.x - self.start_x
-        dy = event.y - self.start_y
-        dist = math.hypot(dx, dy)
+        self.dx = event.x - self.start_x
+        self.dy = event.y - self.start_y
+        dist = math.hypot(self.dx, self.dy)
         if dist > 5:
             self._moved = True
-            self.item_x = self.start_x + dx
-            self.item_y = self.start_y + dy
+            x = self.item_x + self.dx
+            y = self.item_y + self.dy
+            self.canvas.coords(self.item, x, y)
+        else:
+            self._moved = False
 
     def _stop_drag(self, event):
+        self.item_x += self.dx
+        self.item_y += self.dy
         if self.moved:
             self.moved = False
+            print(self.moved)
         else:
             self.on_left_click()
 
@@ -313,8 +317,8 @@ class Card(Drag):
         self.front_img = front_img
         # self.box = box
         self.face_up = False
-        # self.image_id = canva.create_image(x, y, image=self.back_img, tags="card")
-        # self.canva = canva
+        self.image_id = canva.create_image(x, y, image=self.back_img, tags="card")
+        self.canva = canva
         # self.canva.tag_lower(self.image_id, "box")
         # self.flipping = False
         # self.ready = False
@@ -334,8 +338,6 @@ class Card(Drag):
         self.on_left_click = self.flip
 
     def flip(self):
-        # if self.flipping or not self.ready:
-        #     return
         self.flipping = True
         total_steps = 10
         shrink_steps = total_steps // 2
@@ -613,7 +615,7 @@ card_filenames = [
     if f.endswith(".png") and f not in ("box.png", "back.png")
 ]
 
-a = Card(canva, 300, 400, back_img)
+a = Card(canva, 200, 300, back_img, card_imgs[0])
 
 # group = Box(
 # canva, screen_w / 2, screen_h - 108, box_img, back_img, card_imgs, card_filenames

@@ -6,7 +6,7 @@ WHITE_IMG = "./image/button/card_button_white.png"
 GRAY_IMG = "./image/button/card_button_gray.png"
 ORANGE_IMG = "./image/button/card_button_orange.png"
 TARGET_SCRIPT = "card.py"
-BG_COLOR = "#00FF00"
+BG_COLOR = "#000000"
 SCALE = 0.52
 card_program = None
 
