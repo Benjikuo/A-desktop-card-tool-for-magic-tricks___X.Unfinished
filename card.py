@@ -25,7 +25,6 @@ class Drag:
         self.start_x, self.start_y = 0, 0
         self.dx, self.dy = 0, 0
         self.dragged = False
-        self.draggable = True
         self.w = w
         self.h = h
 
@@ -40,9 +39,6 @@ class Drag:
         self.canva.tag_raise(self.item_id)
 
     def _on_drag(self, event):
-        if not self.draggable:
-            return
-
         self.dx = event.x - self.start_x
         self.dy = event.y - self.start_y
         dist = math.hypot(self.dx, self.dy)
@@ -121,11 +117,14 @@ class Box(Drag):
         self.canva.tag_raise(self.item_id)
         card.up()
 
-    def delete_card(self, targets):
+    def delete_card(self, targets, n=None):
+        if n is None:
+            n = len(targets)
+
         def delete_next(i):
             if i < len(targets):
                 if targets[i] in self.used_card:
-                    targets[i].delete()
+                    targets[i].delete(count=max(3, int(10 - n // 7)))
                 self.canva.after(75, lambda i=i + 1: delete_next(i))
 
         delete_next(0)
@@ -138,7 +137,7 @@ class Box(Drag):
         self.unused_card_names.add(card_name)
         self.used_card.remove(card)
 
-    def spawn_spread(self, event=None, group="all", sort="random", delete_used=True):
+    def spawn_spread(self, event=None, group="all", sort="standard", delete_used=True):
         if self.spreading:
             return
 
@@ -188,12 +187,27 @@ class Group(Drag):
         super().__init__(canva, x, y, self.this_group, self.w, self.h)
         self.box = box
         self.back_img = back_img
-        self.available = available.copy()
         self.group_cards = []
+        self.moving = False
 
-        self.left_click = self.wave_animation
-        self.middle_click = self.delete_group
-        self.right_click = self.stack
+        def standard_sort(name):
+            if "joker-(1)" in name:
+                return (-1, -1)
+            if "joker-(2)" in name:
+                return (99, 99)
+
+            order = ["spade", "diamond", "club", "heart"]
+            suit = next(i for i, s in enumerate(order) if s in name)
+            digits = "".join(ch for ch in name if ch.isdigit())
+            rank = int(digits)
+            return (suit, rank)
+
+        if sort == "random":
+            self.available = random.sample(available.copy(), len(available))
+        elif sort == "standard":
+            self.available = sorted(available, key=standard_sort)
+        else:
+            print("⚠️ Invalid sort option:", sort)
 
         self.spread()
 
@@ -204,14 +218,14 @@ class Group(Drag):
 
         def generat_next(step):
             if self.available:
-                card_name = self.available.pop()
+                card_name = self.available.pop(0)
                 if card_name not in self.box.unused_card_names:
                     for c in self.box.used_card:
                         if c.card_name == card_name:
-                            self.box.delete_card([c])
+                            self.box.delete_card([c], n=54)
+                            print("🟩 Card deleted:", card_name)
                             break
 
-                    print("🟩 Card deleted:", card_name)
                 front_img = load_image(card_name, CARD_SIZE)
                 x = self.item_x + CARD_SIZE[0] / 2 + 35 + step * SPREAD_SPACING
                 y = self.item_y + CARD_SIZE[1] / 2
@@ -220,6 +234,9 @@ class Group(Drag):
                 self.canva.after(50, lambda s=step: generat_next(s))
             else:
                 self.box.spreading = False
+                self.left_click = self.wave_animation
+                self.middle_click = self.delete_group
+                self.right_click = self.stack
                 check_spread()
 
         generat_next(0)
@@ -243,7 +260,8 @@ class Group(Drag):
             group=self,
             in_spread=True,
         )
-        self.dragging(True, [card])
+        if self.moving:
+            self.dragging(True, [card])
         self.box.take_card(card_name, card)
         self.group_cards.append(card)
 
@@ -258,6 +276,7 @@ class Group(Drag):
         pass
 
     def dragging(self, state, card=None):
+        self.moving = state
         target_cards = card if card is not None else self.group_cards
         for i in target_cards:
             i.move_card(self.dx, self.dy, state)
@@ -413,8 +432,8 @@ class Card(Drag):
 
         animate_scale(0)
 
-    def delete(self, event=None):
-        star_effect(self.canva, self.item_x, self.item_y)
+    def delete(self, event=None, count=10):
+        star_effect(self.canva, self.item_x, self.item_y, count)
         self.box.return_card(self.card_name, self)
         if self.group and self.in_spread:
             self.group.group_cards.remove(self)  # type: ignore
@@ -446,7 +465,7 @@ class Card(Drag):
     #         self.canva.move(self.this_card, 0, diff * self.wave_speed)
 
 
-def star_effect(canva, x, y, count=10):
+def star_effect(canva, x, y, count):
     stars_group = []
     for _ in range(count):
         angle = random.uniform(0, 2 * math.pi)
