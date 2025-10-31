@@ -46,6 +46,7 @@ class Drag:
         self.dx = event.x - self.start_x
         self.dy = event.y - self.start_y
         dist = math.hypot(self.dx, self.dy)
+
         if dist > 5:
             self.dragging(True)
             x = self.item_x + self.dx
@@ -87,10 +88,10 @@ class Box(Drag):
         super().__init__(canva, x, y, self.this_box)
         self.initial_x, self.initial_y = x, y
         self.back_img = back_img
+        self.all_cards = set(card_imgs_names)
         self.unused_card_names = set(card_imgs_names)
         self.used_card = []
         self.spreading = False
-        self.deleting = False
 
         self.left_click = self.spawn_card
         self.middle_click = self.reset_position
@@ -120,25 +121,12 @@ class Box(Drag):
         self.canva.tag_raise(self.item_id)
         card.up()
 
-    def delete_card(self, group="all", targets=None):
-        if not targets:
-            if group == "all":
-                targets = self.used_card.copy()
-            else:
-                targets = [card for card in self.used_card if group in card.card_name]
-
-        if not targets:
-            return
-
-        self.deleting = True
-
+    def delete_card(self, targets):
         def delete_next(i):
             if i < len(targets):
                 if targets[i] in self.used_card:
                     targets[i].delete()
-                self.canva.after(50, lambda i=i + 1: delete_next(i))
-            else:
-                self.deleting = False
+                self.canva.after(75, lambda i=i + 1: delete_next(i))
 
         delete_next(0)
 
@@ -157,18 +145,20 @@ class Box(Drag):
         self.spreading = True
 
         if delete_used:
-            self.delete_card(group)
+            from_group = self.all_cards.copy()
+        else:
+            from_group = self.unused_card_names
 
         if group == "all":
-            available = list(self.unused_card_names)
+            available = list(from_group)
         elif group == "spade":
-            available = [name for name in self.unused_card_names if "spade" in name]
+            available = [name for name in from_group if "spade" in name]
         elif group == "diamond":
-            available = [name for name in self.unused_card_names if "diamond" in name]
+            available = [name for name in from_group if "diamond" in name]
         elif group == "club":
-            available = [name for name in self.unused_card_names if "club" in name]
+            available = [name for name in from_group if "club" in name]
         elif group == "heart":
-            available = [name for name in self.unused_card_names if "heart" in name]
+            available = [name for name in from_group if "heart" in name]
         else:
             available = []
 
@@ -198,8 +188,6 @@ class Group(Drag):
         super().__init__(canva, x, y, self.this_group, self.w, self.h)
         self.box = box
         self.back_img = back_img
-        self.x = self.item_x + CARD_SIZE[0] / 2 + 15
-        self.y = self.item_y + CARD_SIZE[1] / 2
         self.available = available.copy()
         self.group_cards = []
 
@@ -214,7 +202,27 @@ class Group(Drag):
             print("⚠️ No cards to spread.")
             return
 
-        self.draggable = False
+        def generat_next(step):
+            if self.available:
+                card_name = self.available.pop()
+                if card_name not in self.box.unused_card_names:
+                    for c in self.box.used_card:
+                        if c.card_name == card_name:
+                            self.box.delete_card([c])
+                            break
+
+                    print("🟩 Card deleted:", card_name)
+                front_img = load_image(card_name, CARD_SIZE)
+                x = self.item_x + CARD_SIZE[0] / 2 + 35 + step * SPREAD_SPACING
+                y = self.item_y + CARD_SIZE[1] / 2
+                self.spawn_card(front_img, card_name, x, y)
+                step += 1
+                self.canva.after(50, lambda s=step: generat_next(s))
+            else:
+                self.box.spreading = False
+                check_spread()
+
+        generat_next(0)
 
         def check_spread():
             if self.group_cards == []:
@@ -222,22 +230,6 @@ class Group(Drag):
                 return
 
             self.canva.after(100, check_spread)
-
-        def generat_next(x, y):
-            if self.available:
-                card_name = self.available.pop()
-                front_img = load_image(card_name, CARD_SIZE)
-                x += SPREAD_SPACING
-                self.spawn_card(front_img, card_name, x, y)
-                self.canva.after(50, lambda x=x, y=y: generat_next(x, y))
-            else:
-                self.draggable = True
-                self.box.spreading = False
-                check_spread()
-
-            print(self.box.deleting)
-
-        generat_next(self.x, self.y)
 
     def spawn_card(self, front_img, card_name, x, y):
         card = Card(
@@ -251,6 +243,7 @@ class Group(Drag):
             group=self,
             in_spread=True,
         )
+        self.dragging(True, [card])
         self.box.take_card(card_name, card)
         self.group_cards.append(card)
 
@@ -258,14 +251,15 @@ class Group(Drag):
         pass
 
     def delete_group(self, event=None):
-        self.box.delete_card(targets=self.group_cards.copy())
+        self.box.delete_card(self.group_cards.copy())
         self.canva.delete(self.this_group)
 
     def stack(self, event=None):
         pass
 
-    def dragging(self, state):
-        for i in self.group_cards:
+    def dragging(self, state, card=None):
+        target_cards = card if card is not None else self.group_cards
+        for i in target_cards:
             i.move_card(self.dx, self.dy, state)
 
     # # 建立排列 (cards_names 為卡片檔名清單)
