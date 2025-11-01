@@ -117,14 +117,11 @@ class Box(Drag):
         self.canva.tag_raise(self.item_id)
         card.up()
 
-    def delete_card(self, targets, n=None):
-        if n is None:
-            n = len(targets)
-
+    def delete_card(self, targets):
         def delete_next(i):
             if i < len(targets):
                 if targets[i] in self.used_card:
-                    targets[i].delete(count=max(3, int(10 - n // 7)))
+                    targets[i].delete(count=5)
                 self.canva.after(75, lambda i=i + 1: delete_next(i))
 
         delete_next(0)
@@ -137,7 +134,14 @@ class Box(Drag):
         self.unused_card_names.add(card_name)
         self.used_card.remove(card)
 
-    def spawn_spread(self, event=None, group="all", sort="standard", delete_used=True):
+    def spawn_spread(
+        self,
+        event=None,
+        group="all",
+        sort="random",
+        delete_used=True,
+        face_up=False,
+    ):
         if self.spreading:
             return
 
@@ -165,13 +169,19 @@ class Box(Drag):
             print("⚠️ All cards have been generated!")
             return
 
-        Group(self.canva, self, self.back_img, available, sort)
+        Group(self.canva, self, self.back_img, available, sort, face_up)
 
 
 class Group(Drag):
-    def __init__(self, canva, box, back_img, available, sort):
-        x = box.item_x - 100
-        y = box.item_y
+    def __init__(self, canva, box, back_img, available, sort, face_up):
+        n = len(available)
+        screen_w = canva.winfo_width()
+        screen_h = canva.winfo_height()
+
+        total_width = CARD_SIZE[0] + (n - 1) * SPREAD_SPACING
+        x = (screen_w - total_width) / 2 - CARD_SIZE[0] / 2 + 2
+        y = screen_h / 2 - CARD_SIZE[1] / 2
+
         self.w = CARD_SIZE[0] / 4
         self.h = CARD_SIZE[1]
         self.this_group = canva.create_rectangle(
@@ -189,6 +199,10 @@ class Group(Drag):
         self.back_img = back_img
         self.group_cards = []
         self.moving = False
+        self.flipping = False
+        self.stacking = False
+        self.stacked = False
+        self.face_up = face_up
 
         def standard_sort(name):
             if "joker-(1)" in name:
@@ -211,6 +225,12 @@ class Group(Drag):
 
         self.spread()
 
+    def dragging(self, state, card=None):
+        self.moving = state
+        target_cards = card if card is not None else self.group_cards
+        for i in target_cards:
+            i.move_card(self.dx, self.dy, state)
+
     def spread(self):
         if not self.available:
             print("⚠️ No cards to spread.")
@@ -222,19 +242,19 @@ class Group(Drag):
                 if card_name not in self.box.unused_card_names:
                     for c in self.box.used_card:
                         if c.card_name == card_name:
-                            self.box.delete_card([c], n=54)
+                            self.box.delete_card([c])
                             print("🟩 Card deleted:", card_name)
                             break
 
                 front_img = load_image(card_name, CARD_SIZE)
                 x = self.item_x + CARD_SIZE[0] / 2 + 35 + step * SPREAD_SPACING
                 y = self.item_y + CARD_SIZE[1] / 2
-                self.spawn_card(front_img, card_name, x, y)
+                self.spawn_card(front_img, card_name, x, y, face_up=self.face_up)
                 step += 1
                 self.canva.after(50, lambda s=step: generat_next(s))
             else:
                 self.box.spreading = False
-                self.left_click = self.wave_animation
+                self.left_click = self.flip_all
                 self.middle_click = self.delete_group
                 self.right_click = self.stack
                 check_spread()
@@ -248,7 +268,7 @@ class Group(Drag):
 
             self.canva.after(100, check_spread)
 
-    def spawn_card(self, front_img, card_name, x, y):
+    def spawn_card(self, front_img, card_name, x, y, face_up):
         card = Card(
             self.canva,
             self.box,
@@ -259,69 +279,73 @@ class Group(Drag):
             card_name,
             group=self,
             in_spread=True,
+            face_up=face_up,
         )
         if self.moving:
             self.dragging(True, [card])
         self.box.take_card(card_name, card)
         self.group_cards.append(card)
 
-    def wave_animation(self, event=None):
-        pass
+    def flip_all(self, event=None):
+        if self.stacked:
+            self.stack()
+            return
+        if self.flipping or self.stacking:
+            return
+
+        self.flipping = True
+        self.canva.itemconfig(self.this_group, fill="#111111")
+        cards = self.group_cards.copy()
+
+        def flip_next(step):
+            if step < len(cards):
+                cards[step].flip_all()
+                step += 1
+                self.canva.after(50, lambda s=step: flip_next(s))
+            else:
+                self.flipping = False
+                self.canva.after(
+                    400, lambda: self.canva.itemconfig(self.this_group, fill="#333333")
+                )
+
+        flip_next(0)
 
     def delete_group(self, event=None):
         self.box.delete_card(self.group_cards.copy())
         self.canva.delete(self.this_group)
 
     def stack(self, event=None):
-        pass
+        if self.flipping or self.stacking:
+            return
 
-    def dragging(self, state, card=None):
-        self.moving = state
-        target_cards = card if card is not None else self.group_cards
-        for i in target_cards:
-            i.move_card(self.dx, self.dy, state)
+        self.stacking = True
 
-    # # 建立排列 (cards_names 為卡片檔名清單)
-    # def create(self, cards_names, start_x, start_y):
-    #     total_width = CARD_SIZE[0] + (len(cards_names) - 1) * RIBBON_SPACING
-    #     self.handle_x = start_x - CARD_SIZE[0] // 2 - HANDLE_RADIUS - 10
-    #     self.handle_y = start_y
+        if self.stacked:
+            pass
+        else:
+            pass
 
-    #     # 逐張生成卡片
-    #     for i, name in enumerate(cards_names):
-    #         if name not in self.box.used_card_names:
-    # # 橫向展開 (spread)
-    # def spread(self):
-    #     if not self.unused_card_name:
-    #         print("⚠️ No cards to spread.")
-    #         return
-    #     total = len(self.unused_card_name)
-    #     screen_w = self.canva.winfo_width()
-    #     start_x = (screen_w - (CARD_SIZE[0] + (total - 1) * SIMPLE_SPACING)) // 2
-    #     y = self.unused_card_name[0].item_y
-    #     for i, card in enumerate(self.unused_card_name):
-    #         target_x = start_x + i * SIMPLE_SPACING
-    #         self._move_card_to(card, target_x, y)
+        return
 
-    # def _move_card_to(self, card, target_x, target_y, step=0):
-    #     cx, cy = self.canva.coords(card.this_card)
-    #     dx = (target_x - cx) / 5
-    #     dy = (target_y - cy) / 5
-    #     if abs(dx) < 0.5 and abs(dy) < 0.5:
-    #         self.canva.coords(card.this_card, target_x, target_y)
-    #         card.item_x, card.item_y = target_x, target_y
-    #         return
-    #     self.canva.move(card.this_card, dx, dy)
-    #     self.canva.after(
-    #         16, lambda: self._move_card_to(card, target_x, target_y, step + 1)
-    #     )   #             self.box.used_card_names.add(name)
-    #         front_img = load_image(name, CARD_SIZE)
-    #         x = start_x + i * RIBBON_SPACING
-    #         y = start_y
-    #         self.canva.after(
-    #             i * 40,
-    #             lambda n=name, x=x, y=y, f=front_img: self.spawn_card(f, n, x, y),
-    #         )
+        center_x = self.item_x + CARD_SIZE[0] / 2 + 35
+        center_y = self.item_y + CARD_SIZE[1] / 2
+
+        for i in range(len(self.group_cards)):
+            if i < len(self.group_cards):
+                card = self.group_cards[i]
+                cur_x, cur_y = self.canva.coords(card.this_card)
+                dx = (center_x - cur_x) / 8
+                dy = (center_y - cur_y) / 8
+
+                def step_move(step=0):
+                    if step < 8:
+                        self.canva.move(card.this_card, dx, dy)
+                        self.canva.after(10, lambda: step_move(step + 1))
+                    else:
+                        self.canva.coords(card.this_card, center_x, center_y)
+                        self.stacking = False
+
+                step_move()
 
     # # 彩帶排列 (ribbon_wave)
     # def ribbon_wave(self):
@@ -351,16 +375,19 @@ class Card(Drag):
         card_name,
         group=None,
         in_spread=False,
+        face_up=False,
     ):
         self.back_img = back_img
         self.front_img = front_img
-        self.this_card = canva.create_image(x, y, image=self.back_img, tags="card")
+        self.face_up = face_up
+        self.this_card = canva.create_image(
+            x, y, image=self.front_img if self.face_up else self.back_img, tags="card"
+        )
         super().__init__(canva, x, y, self.this_card)
         self.box = box
         self.group = group
         self.card_name = card_name
         self.flipping = False
-        self.face_up = False
         self.in_spread = in_spread
 
         self.left_click = self.flip
@@ -370,6 +397,17 @@ class Card(Drag):
         if self.in_spread:
             self.in_spread = False
             self.group.group_cards.remove(self)  # type: ignore
+
+    def move_card(self, dx, dy, state):
+        if not self.in_spread:
+            return
+
+        if state:
+            self.canva.coords(self.this_card, self.item_x + dx, self.item_y + dy)
+        else:
+            self.item_x += dx
+            self.item_y += dy
+            self.canva.coords(self.this_card, self.item_x, self.item_y)
 
     def up(self):
         total_steps = 12
@@ -400,37 +438,38 @@ class Card(Drag):
             return
 
         self.flipping = True
-        total_steps = 16
+        self.animate_scale(0, 16)
+
+    def flip_all(self):
+        self.flipping = True
+        self.animate_scale(0, 32)
+
+    def animate_scale(self, step, total_steps):
         shrink_steps = total_steps / 2
+        if step < shrink_steps:
+            scale = (shrink_steps - step) / shrink_steps
+            img = self.scale_image(scale)
+            self.img = img  # type: ignore
+            self.canva.itemconfig(self.this_card, image=img)
+        elif step == shrink_steps:
+            self.face_up = not self.face_up
+        elif step <= total_steps:
+            scale = (step - shrink_steps) / shrink_steps
+            img = self.scale_image(scale)
+            self.img = img  # type: ignore
+            self.canva.itemconfig(self.this_card, image=img)
+        else:
+            self.flipping = False
+            return
+        self.canva.after(10, lambda: self.animate_scale(step + 1, total_steps))
 
-        def scale_image(scale):
-            img = self.front_img if self.face_up else self.back_img
-            pil = ImageTk.getimage(img)
-            w, h = pil.size
-            new_w = max(1, int(w * scale))
-            resized = pil.resize((new_w, h))
-            return ImageTk.PhotoImage(resized)
-
-        def animate_scale(step):
-            if step < shrink_steps:
-                scale = (shrink_steps - step) / shrink_steps
-                img = scale_image(scale)
-                self.img = img  # type: ignore
-                self.canva.itemconfig(self.this_card, image=img)
-            elif step == shrink_steps:
-                self.face_up = not self.face_up
-            elif step <= total_steps:
-                scale = (step - shrink_steps) / shrink_steps
-                img = scale_image(scale)
-                self.img = img  # type: ignore
-                self.canva.itemconfig(self.this_card, image=img)
-            else:
-                self.flipping = False
-                return
-
-            self.canva.after(10, lambda: animate_scale(step + 1))
-
-        animate_scale(0)
+    def scale_image(self, scale):
+        img = self.front_img if self.face_up else self.back_img
+        pil = ImageTk.getimage(img)
+        w, h = pil.size
+        new_w = max(1, int(w * scale))
+        resized = pil.resize((new_w, h))
+        return ImageTk.PhotoImage(resized)
 
     def delete(self, event=None, count=10):
         star_effect(self.canva, self.item_x, self.item_y, count)
@@ -438,17 +477,6 @@ class Card(Drag):
         if self.group and self.in_spread:
             self.group.group_cards.remove(self)  # type: ignore
         self.canva.delete(self.this_card)
-
-    def move_card(self, dx, dy, state):
-        if not self.in_spread:
-            return
-
-        if state:
-            self.canva.coords(self.this_card, self.item_x + dx, self.item_y + dy)
-        else:
-            self.item_x += dx
-            self.item_y += dy
-            self.canva.coords(self.this_card, self.item_x, self.item_y)
 
     # def update_wave(self, mouse_y):
     #     dy = abs(self.base_y - mouse_y)
