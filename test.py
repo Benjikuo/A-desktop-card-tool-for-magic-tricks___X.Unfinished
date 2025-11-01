@@ -122,7 +122,7 @@ class Box(Drag):
             if i < len(targets):
                 if targets[i] in self.used_card:
                     targets[i].delete(count=5)
-                self.canva.after(75, lambda i=i + 1: delete_next(i))
+                self.canva.after(50, lambda i=i + 1: delete_next(i))
 
         delete_next(0)
 
@@ -189,7 +189,7 @@ class Group(Drag):
             y,
             x + self.w,
             y + self.h,
-            fill="#333333",
+            fill="#111111",
             outline="#444444",
             width=3,
             tags="group",
@@ -197,12 +197,15 @@ class Group(Drag):
         super().__init__(canva, x, y, self.this_group, self.w, self.h)
         self.box = box
         self.back_img = back_img
+        self.spawn_x = self.item_x
+        self.spawn_y = self.item_y
+        self.face_up = face_up
         self.group_cards = []
         self.moving = False
         self.flipping = False
         self.stacking = False
         self.stacked = False
-        self.face_up = face_up
+        self.drag_box = None
 
         def standard_sort(name):
             if "joker-(1)" in name:
@@ -222,46 +225,35 @@ class Group(Drag):
             self.available = sorted(available, key=standard_sort)
         else:
             print("⚠️ Invalid sort option:", sort)
-
         self.spread()
 
     def dragging(self, state, card=None):
         if state:
-            # 取得卡片的座標範圍
-            coords = [
-                self.canva.coords(c.this_card)
-                for c in self.group_cards
-                if hasattr(c, "this_card")
-            ]
-            if not coords:
-                return
-            xs = [x for x, _ in coords]
-            ys = [y for _, y in coords]
-            left = min(xs) - CARD_SIZE[0] / 2
-            right = max(xs) + CARD_SIZE[0] / 2
-            top = min(ys) - CARD_SIZE[1] / 2
-            bottom = max(ys) + CARD_SIZE[1] / 2
+            x1, y1 = self.canva.coords(self.group_cards[0].this_card)
+            x2, y2 = self.canva.coords(self.group_cards[-1].this_card)
 
-            # === ✅ 檢查是否已有 drag_box ===
-            if not hasattr(self, "drag_box") or not self.drag_box:
+            x1 -= CARD_SIZE[0] / 2
+            x2 += CARD_SIZE[0] / 2
+            y1 -= CARD_SIZE[1] / 2
+            y2 += CARD_SIZE[1] / 2
+
+            if self.drag_box == None:
                 self.drag_box = self.canva.create_rectangle(
-                    left,
-                    top,
-                    right,
-                    bottom,
+                    x1,
+                    y1,
+                    x2,
+                    y2,
                     outline="#FFA500",
-                    width=2,
-                    dash=(4, 3),
-                    fill="",  # 若想半透明可用 fill="#FFA500"
+                    width=3,
+                    dash=(3, 3),
                     tags="drag_outline",
                 )
             else:
-                # 若已存在，更新位置即可
-                self.canva.coords(self.drag_box, left, top, right, bottom)
-
+                self.canva.coords(self.drag_box, x1, y1, x2, y2)
         else:
-            # === 拖曳結束 → 刪除橘框 ===
-            if hasattr(self, "drag_box") and self.drag_box:
+            self.spawn_x += self.dx
+            self.spawn_y += self.dy
+            if self.drag_box:
                 self.canva.delete(self.drag_box)
                 self.drag_box = None
 
@@ -286,26 +278,19 @@ class Group(Drag):
                             break
 
                 front_img = load_image(card_name, CARD_SIZE)
-                x = self.item_x + CARD_SIZE[0] / 2 + 35 + step * SPREAD_SPACING
-                y = self.item_y + CARD_SIZE[1] / 2
+                x = self.spawn_x + CARD_SIZE[0] / 2 + 35 + step * SPREAD_SPACING
+                y = self.spawn_y + CARD_SIZE[1] / 2
                 self.spawn_card(front_img, card_name, x, y, face_up=self.face_up)
                 step += 1
                 self.canva.after(50, lambda s=step: generat_next(s))
             else:
                 self.box.spreading = False
+                self.canva.itemconfig(self.this_group, fill="#222222")
                 self.left_click = self.flip_all
                 self.middle_click = self.delete_group
                 self.right_click = self.stack
-                check_spread()
 
         generat_next(0)
-
-        def check_spread():
-            if self.group_cards == []:
-                self.canva.delete(self.this_group)
-                return
-
-            self.canva.after(100, check_spread)
 
     def spawn_card(self, front_img, card_name, x, y, face_up):
         card = Card(
@@ -352,6 +337,22 @@ class Group(Drag):
     def delete_group(self, event=None):
         self.box.delete_card(self.group_cards.copy())
         self.canva.delete(self.this_group)
+
+    def remove_card(self, card):
+        self.group_cards.remove(card)
+        if self.group_cards == []:
+            self.canva.delete(self.this_group)
+        elif self.this_group:
+            x, y = self.canva.coords(self.group_cards[0].this_card)
+            self.item_x = x - CARD_SIZE[0] / 2 - 35
+            self.item_y = y - CARD_SIZE[1] / 2
+            self.canva.coords(
+                self.this_group,
+                self.item_x,
+                self.item_y,
+                self.item_x + self.w,
+                self.item_y + self.h,
+            )
 
     def stack(self, event=None):
         if self.flipping or self.stacking:
@@ -470,7 +471,7 @@ class Card(Drag):
 
         if self.in_spread:
             self.in_spread = False
-            self.group.group_cards.remove(self)  # type: ignore
+            self.group.remove_card(self)  # type: ignore
             self.up()
             if not self.face_up:
                 self.canva.after(200, self.flip)
@@ -513,8 +514,8 @@ class Card(Drag):
     def delete(self, event=None, count=10):
         star_effect(self.canva, self.item_x, self.item_y, count)
         self.box.return_card(self.card_name, self)
-        if self.group and self.in_spread:
-            self.group.group_cards.remove(self)  # type: ignore
+        if self.in_spread:
+            self.group.remove_card(self)  # type: ignore
         self.canva.delete(self.this_card)
 
     # def update_wave(self, mouse_y):
