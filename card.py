@@ -203,6 +203,7 @@ class Group(Drag):
         self.stacking = False
         self.stacked = False
         self.face_up = face_up
+        self.drag_box = None
 
         def standard_sort(name):
             if "joker-(1)" in name:
@@ -222,10 +223,42 @@ class Group(Drag):
             self.available = sorted(available, key=standard_sort)
         else:
             print("⚠️ Invalid sort option:", sort)
-
         self.spread()
 
     def dragging(self, state, card=None):
+        if state:
+            coords = [
+                self.canva.coords(c.this_card)
+                for c in self.group_cards
+                if hasattr(c, "this_card")
+            ]
+            if not coords:
+                return
+            xs = [x for x, _ in coords]
+            ys = [y for _, y in coords]
+            x1 = min(xs) - CARD_SIZE[0] / 2
+            x2 = max(xs) + CARD_SIZE[0] / 2
+            y1 = min(ys) - CARD_SIZE[1] / 2
+            y2 = max(ys) + CARD_SIZE[1] / 2
+
+            if self.drag_box == None:
+                self.drag_box = self.canva.create_rectangle(
+                    x1,
+                    y1,
+                    x2,
+                    y2,
+                    outline="#FFA500",
+                    width=3,
+                    dash=(3, 3),
+                    tags="drag_outline",
+                )
+            else:
+                self.canva.coords(self.drag_box, x1, y1, x2, y2)
+        else:
+            if self.drag_box:
+                self.canva.delete(self.drag_box)
+                self.drag_box = None
+
         self.moving = state
         target_cards = card if card is not None else self.group_cards
         for i in target_cards:

@@ -226,6 +226,45 @@ class Group(Drag):
         self.spread()
 
     def dragging(self, state, card=None):
+        if state:
+            # 取得卡片的座標範圍
+            coords = [
+                self.canva.coords(c.this_card)
+                for c in self.group_cards
+                if hasattr(c, "this_card")
+            ]
+            if not coords:
+                return
+            xs = [x for x, _ in coords]
+            ys = [y for _, y in coords]
+            left = min(xs) - CARD_SIZE[0] / 2
+            right = max(xs) + CARD_SIZE[0] / 2
+            top = min(ys) - CARD_SIZE[1] / 2
+            bottom = max(ys) + CARD_SIZE[1] / 2
+
+            # === ✅ 檢查是否已有 drag_box ===
+            if not hasattr(self, "drag_box") or not self.drag_box:
+                self.drag_box = self.canva.create_rectangle(
+                    left,
+                    top,
+                    right,
+                    bottom,
+                    outline="#FFA500",
+                    width=2,
+                    dash=(4, 3),
+                    fill="",  # 若想半透明可用 fill="#FFA500"
+                    tags="drag_outline",
+                )
+            else:
+                # 若已存在，更新位置即可
+                self.canva.coords(self.drag_box, left, top, right, bottom)
+
+        else:
+            # === 拖曳結束 → 刪除橘框 ===
+            if hasattr(self, "drag_box") and self.drag_box:
+                self.canva.delete(self.drag_box)
+                self.drag_box = None
+
         self.moving = state
         target_cards = card if card is not None else self.group_cards
         for i in target_cards:
