@@ -10,7 +10,7 @@ This is a program that allows a magician to select a random or specific card on 
 ## 🛠️ Why I Built This
 - There are times that I forget to bring my cards, which makes me wonder if I can do a magic trick on computer.
 - It’s a good way to learn how Python classes work ... figuring out each one takes time, though (^_^)a.
-- I like fill my desktop with some programs. They look cool.
+- I like to fill my desktop with interesting programs. They look cool.
 
 <br>
 
