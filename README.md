@@ -2,7 +2,7 @@
 This is a program that allows a magician to select a random or specific card on a computer desktop.
 
 <p>
-  <img src="./video/showcase.gif" width="600">
+  <img src="./image/showcase.gif" width="600">
 </p>
 
 ## 🛠️ Why I Built This
