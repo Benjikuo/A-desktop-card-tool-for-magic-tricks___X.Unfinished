@@ -7,6 +7,7 @@ CARD_FOLDER = "image/card"
 CARD_SIZE = (74, 111)
 BOX_SIZE = (80, 120)
 SPREAD_SPACING = 20
+LIST_SPACING = 100
 WAVE_WIDTH = 100
 WAVE_HEIGHT = 15
 NO_WAVE_RANGE = 60
@@ -170,6 +171,72 @@ class Box(Drag):
 
         Group(self.canva, self, self.back_img, available, sort, face_up)
 
+    def list_card_value(self, card_name, delete_used=True, face_up=True):
+        if delete_used:
+            from_group = self.all_cards.copy()
+        else:
+            from_group = self.unused_card_names
+
+        if "joker" in card_name:
+            available = [name for name in from_group if "joker" in name]
+            available.sort()
+        else:
+            digits = "".join(ch for ch in card_name if ch.isdigit())
+            available = []
+            for name in from_group:
+                this_digits = "".join(ch for ch in name if ch.isdigit())
+                if digits == this_digits and "joker" not in name:
+                    available += [name]
+
+            order = ["spade", "diamond", "club", "heart"]
+            available = sorted(
+                available, key=lambda n: order.index(next(s for s in order if s in n))
+            )
+
+        if not available:
+            print("⚠️ All cards have been generated!")
+            return
+
+        n = len(available)
+        screen_w = canva.winfo_width()
+        screen_h = canva.winfo_height()
+        total_width = CARD_SIZE[0] + (n - 1) * LIST_SPACING
+
+        def generate_next(step, w):
+            if available:
+                card_name = available.pop(0)
+                if card_name not in self.unused_card_names:
+                    for c in self.used_card:
+                        if c.card_name == card_name:
+                            self.delete_card([c])
+                            print("🟩 Card deleted:", card_name)
+                            break
+
+                print("🟩 Total width:", total_width)
+
+                x = (
+                    (screen_w - total_width) / 2
+                    + CARD_SIZE[0] / 2
+                    + LIST_SPACING * step
+                )
+                y = screen_h / 2 + CARD_SIZE[1] / 2 - 95
+
+                front_img = load_image(card_name, CARD_SIZE)
+                card = Card(
+                    self.canva,
+                    self,
+                    x,
+                    y,
+                    self.back_img,
+                    front_img,
+                    card_name,
+                    face_up=face_up,
+                )
+                self.take_card(card_name, card)
+                self.canva.after(50, lambda s=step + 1: generate_next(s, w))
+
+        generate_next(0, total_width)
+
 
 class Group(Drag):
     instances = []
@@ -180,8 +247,8 @@ class Group(Drag):
         screen_h = canva.winfo_height()
 
         total_width = CARD_SIZE[0] + (n - 1) * SPREAD_SPACING
-        x = (screen_w - total_width) / 2 - CARD_SIZE[0] / 2 + 2
-        y = screen_h / 2 - CARD_SIZE[1] / 2
+        x = (screen_w - total_width) / 2 - CARD_SIZE[0] / 2
+        y = screen_h / 2 - CARD_SIZE[1] / 2 + 136
 
         self.w = CARD_SIZE[0] / 4
         self.h = CARD_SIZE[1]
@@ -265,11 +332,7 @@ class Group(Drag):
             i.move_card(self.dx, self.dy, state)
 
     def spread(self):
-        if not self.available:
-            print("⚠️ No cards to spread.")
-            return
-
-        def generat_next(step):
+        def generate_next(step):
             if self.available:
                 card_name = self.available.pop(0)
                 if card_name not in self.box.unused_card_names:
@@ -283,7 +346,7 @@ class Group(Drag):
                 x = self.spawn_x + CARD_SIZE[0] / 2 + 35 + step * SPREAD_SPACING
                 y = self.spawn_y + CARD_SIZE[1] / 2
                 self.spawn_card(front_img, card_name, x, y, face_up=self.face_up)
-                self.canva.after(50, lambda s=step + 1: generat_next(s))
+                self.canva.after(50, lambda s=step + 1: generate_next(s))
             else:
                 self.box.spreading = False
                 self.canva.itemconfig(self.this_group, fill="#222222")
@@ -291,7 +354,7 @@ class Group(Drag):
                 self.middle_click = self.delete_group
                 self.right_click = self.stack
 
-        generat_next(0)
+        generate_next(0)
 
     def spawn_card(self, front_img, card_name, x, y, face_up):
         card = Card(
@@ -475,6 +538,7 @@ class Card(Drag):
 
         self.left_click = self.flip
         self.middle_click = self.delete
+        self.right_click = lambda event: self.box.list_card_value(self.card_name)
 
     def dragging(self, state):
         if self.in_spread:
