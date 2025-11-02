@@ -5,7 +5,7 @@ This is a program that allows a magician to select a random or specific card on 
   <img src="./image/showcase.gif" width="600">
 </p>
 
-##🛠️ Why I Built This
+## 🛠️ Why I Built This
 
 I’ve always been fascinated by the blend of illusion and technology — this project brings both together.
 It’s not just a card generator — it’s a stage for digital magic, letting magicians perform with precision and surprise, right from their screen.
