@@ -16,13 +16,13 @@ This is a program that allows a magician to select a random or specific card on 
 
 ## 🧩 Features
 
-- 🪄 Interactive Cards – Click, drag, flip, and delete cards naturally on your desktop
-- 🃏 Spread & Stack – Instantly pile cards together or reveal them all
-- ✨ Star Effect – Beautiful particle animation when a card disappears  
-- 🌊 Wave Motion – Hover the mouse to make the card group ripple dynamically  
-- 🎲 Smart Deck Spawn – Spawn cards in a random or specific order
-- 📃 Card Listing – Show all the cards of the same suit or value
-- ⌨️ Keyboard Shortcuts – Quickly access all features during live magic performances
+- 🪄 **Interactive Cards** – Click, drag, flip, and delete cards naturally on your desktop
+- 🃏 **Spread & Stack** – Instantly pile cards together or reveal them all
+- ✨ **Star Effect** – Beautiful particle animation when a card disappears  
+- 🌊 **Wave Motion** – Hover the mouse to make the card group ripple dynamically  
+- 🎲 **Smart Deck Spawn** – Spawn cards in a random or specific order
+- 📃 **Card Listing** – Show all the cards of the same suit or value
+- ⌨️ **Keyboard Shortcuts** – Quickly access all features during live magic performances
 
 <br>
 
