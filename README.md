@@ -44,7 +44,7 @@ Desktop Card/
 ## ⚙️ Requirements
 Install dependencies before running:
 ```bash
-pip install pillow opencv-python numpy
+pip install pillow
 ```
 
 <br>
