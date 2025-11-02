@@ -56,7 +56,7 @@ pip install pillow opencv-python numpy
    ```bash
    python card_button.py
    ```
-4. Click the spade-shaped button to toggle the main card window. 
+4. Click the spade-shaped button at at the bottom left to toggle the main card window. 
 
 <br>
 
