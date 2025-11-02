@@ -7,7 +7,7 @@ GRAY_IMG = "./image/button/card_button_gray.png"
 ORANGE_IMG = "./image/button/card_button_orange.png"
 TARGET_SCRIPT = "card.py"
 BG_COLOR = "#000000"
-SCALE = 0.52
+SCALE = 1
 card_program = None
 
 
@@ -45,7 +45,10 @@ root = tk.Tk()
 root.overrideredirect(True)
 root.config(bg=BG_COLOR)
 root.wm_attributes("-transparentcolor", BG_COLOR)
-root.geometry("+142+697")
+
+screen_w = root.winfo_screenwidth()
+screen_h = root.winfo_screenheight()
+root.geometry(f"+0+{screen_h - 120}")
 
 
 img_white = Image.open(WHITE_IMG)
