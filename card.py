@@ -12,8 +12,13 @@ WAVE_WIDTH = 100
 WAVE_HEIGHT = 15
 NO_WAVE_RANGE = 60
 
+focus_box = None
+focus_group = None
+focus_card = None
+
 
 class Drag:
+
     def __init__(self, canva, x, y, item_id, w=None, h=None):
         self.canva = canva
         self.item_id = item_id
@@ -30,6 +35,29 @@ class Drag:
         self.canva.tag_bind(self.item_id, "<ButtonRelease-1>", self._stop_drag)
         self.canva.tag_bind(self.item_id, "<Button-2>", lambda e: self.middle_click(e))
         self.canva.tag_bind(self.item_id, "<Button-3>", lambda e: self.right_click(e))
+
+        for btn in ("<Button-1>", "<Button-2>", "<Button-3>"):
+            self.canva.tag_bind(self.item_id, btn, self._set_focus, add="+")
+
+        self._set_focus()
+
+    def _set_focus(self, event=None):
+        global focus_box, focus_group, focus_card
+        if isinstance(self, Box):
+            focus_box = self
+            focus_group = None
+            focus_card = None
+            print("🎯 Focused: Box")
+        elif isinstance(self, Group):
+            focus_box = self.box
+            focus_group = self
+            focus_card = None
+            print("🎯 Focused: Group")
+        elif isinstance(self, Card):
+            focus_box = self.box
+            focus_group = self.group
+            focus_card = self
+            print(f"🎯 Focused: Card {self.card_name}")
 
     def _start_drag(self, event):
         self.start_x, self.start_y = event.x, event.y
@@ -262,9 +290,9 @@ class Group(Drag):
             width=3,
             tags="group",
         )
+        self.box = box
         super().__init__(canva, x, y, self.this_group, self.w, self.h)
         Group.instances.append(self)
-        self.box = box
         self.back_img = back_img
         self.spawn_x = self.item_x
         self.spawn_y = self.item_y
@@ -528,10 +556,10 @@ class Card(Drag):
         self.this_card = canva.create_image(
             x, y, image=self.front_img if self.face_up else self.back_img, tags="card"
         )
-        super().__init__(canva, x, y, self.this_card)
         self.box = box
         self.group = group
         self.card_name = card_name
+        super().__init__(canva, x, y, self.this_card)
         self.in_spread = in_spread
         self.flipping = False
         self.current_offset = 0
@@ -664,96 +692,96 @@ def on_leave(event):
         g.reset_wave()
 
 
-# def reset(event=None):
-#     global focused_card
-#     for card in group.all_cards:
-#         card.destroyed = True
-#     for item in canva.find_withtag("card"):
-#         canva.delete(item)
-#     for item in canva.find_withtag("ribbon_handle"):
-#         canva.delete(item)
-#     group.used_cards.clear()
-#     group.all_cards.clear()
-#     ribbon_spreads.clear()
-#     focused_card = None
+def flip_all_groups():
+    """翻開目前畫面上所有群組的卡片"""
+    for g in Group.instances:
+        g.flip_all()
+    print("🔄 Flipped all cards.")
 
 
-# def delete_all(event=None):
-#     global focused_card
-#     for item in canva.find_withtag("card"):
-#         x, y = canva.coords(item)
-#         star_effect(canva, x, y)
-#         canva.delete(item)
-#     for item in canva.find_withtag("ribbon_handle"):
-#         canva.delete(item)
-#     group.used_cards.clear()
-#     group.all_cards.clear()
-#     ribbon_spreads.clear()
-#     focused_card = None
+def key_pressed(event):
+    global focus_box, focus_group, focus_card
+    key = event.keysym.lower()
+    ctrl = (event.state & 0x4) != 0
+    print(key, ctrl)
+    spread_by(key, sort="random", face_up=False)
+    if ctrl:
+        if key == "d":  # Ctrl + D → 刪除所有卡
+            for item in canva.find_withtag("card"):
+                x, y = canva.coords(item)
+                star_effect(canva, x, y, 10)
+                canva.delete(item)
+            print("🗑️ Deleted all cards.")
+            return
+
+        elif key == "f":  # Ctrl + F → 翻開所有群組的所有卡
+            for g in Group.instances:
+                g.flip_all()
+            print("🔄 Flipped all cards.")
+            return
+
+        elif key == "s":  # Ctrl + S → 展開整副牌（標準排序）
+            if focus_box:
+                focus_box.spawn_spread(sort="standard", face_up=True)
+                print("🃏 Spread all cards (standard order).")
+            return
+
+    # -------------------------------
+    # 一般快捷鍵（無 Ctrl）
+    # -------------------------------
+    if focus_card:
+        if key == "f":  # 單張卡翻面
+            focus_card.flip()
+            print(f"🔁 Flipped {focus_card.card_name}")
+        elif key == "d":  # 刪除卡片
+            focus_card.delete()
+            print(f"🗑️ Deleted {focus_card.card_name}")
+        elif key == "u":  # 提升卡片動畫
+            focus_card.up()
+            print(f"⬆️ Raised {focus_card.card_name}")
+        return
+
+    if focus_group:
+        if key == "s":  # 疊牌
+            focus_group.stack()
+        elif key == "r":  # 重置波浪
+            focus_group.reset_wave()
+        elif key == "f":  # 翻開整疊
+            focus_group.flip_all()
+        return
+
+    if focus_box:
+        if key == "s":  # 展開隨機排序
+            focus_box.spawn_spread(sort="random", face_up=False)
+        elif key == "r":  # 重設盒子位置
+            focus_box.reset_position()
+        return
 
 
-# def flip_all(event=None):
-#     cards = [c for c in group.all_cards if c.ready and not c.destroyed]
-#     if not cards:
-#         return
-#     all_face_up = all(c.face_up for c in cards)
-#     target_state = not all_face_up
-#     for card in cards:
-#         if card.face_up != target_state:
-#             card.flip_animated()
+def spread_by(key, sort, face_up):
+    print(f"🃏 Spread by {key}")
+    global focus_box
+    if not focus_box:
+        return
+
+    suit_map = {"z": "spade", "x": "diamond", "c": "club", "v": "heart"}
+    value_map = {"a": "1", "0": "10", "j": "11", "q": "12", "k": "13"}
+
+    if key in suit_map:
+        focus_box.spawn_spread(group=suit_map[key], sort=sort, face_up=face_up)
+        print(f"Spread {suit_map[key]} cards.")
+        return
+
+    if key in value_map:
+        key = value_map.get(key)
+
+    focus_box.list_card_value(key)
+    print(f"Show all cards with value {key}")
 
 
 def load_image(name, size):
     place = os.path.join(CARD_FOLDER, name)
     return ImageTk.PhotoImage(Image.open(place).resize(size))
-
-
-def key_pressed(event):
-    key = event.keysym.lower()
-    ctrl = (event.state & 0x4) != 0
-
-    # sortcut
-    # shortcuts = {
-    #     "w": group.ribbon_spread_sorted,
-    #     "s": group.ribbon_spread,
-    #     "r": reset,
-    #     "t": spawn_random_card,
-    #     "d": destroy,
-    #     "f": flip,
-    # }
-    # ctrl_shortcuts = {
-    #     "d": delete_all,
-    #     "f": flip_all,
-    #     "s": group.ribbon_spread,
-    # }
-    # func = (ctrl_shortcuts if ctrl else shortcuts).get(key)
-    # if func:
-    #     func()
-    #     return
-
-    # suit group
-    # suit_map = {"z": "spade", "x": "diamond", "c": "club", "v": "heart"}
-    # if key in suit_map:
-    #     group.ribbon_spread_by_suit(suit_map[key])
-    #     return
-
-    # value group
-    # value = None
-    # if key == "a":
-    #     value = 1
-    # elif key == "0":
-    #     value = 10
-    # elif key == "j":
-    #     value = 11
-    # elif key == "q":
-    #     value = 12
-    # elif key == "k":
-    #     value = 13
-    # elif key.isdigit():
-    #     value = int(key)
-
-    # if value:
-    #     group.spawn_cards_by_value(value)
 
 
 root = tk.Tk()
