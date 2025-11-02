@@ -50,8 +50,8 @@ pip install pillow opencv-python numpy
 <br>
 
 ## ▶️ How to Run
-1. Make sure the folder /image/card contains 54 card faces, one back image, and one box image.
-2. Make sure the folder /image/button contains the three button states (gray, orange, and white).
+1. Make sure the folder /image/card contains **54 card faces**, one **back image**, and one **box image**.
+2. Make sure the folder /image/button contains the **three** button states (gray, orange, and white).
 3. Launch the program:
    ```bash
    python card_button.py
