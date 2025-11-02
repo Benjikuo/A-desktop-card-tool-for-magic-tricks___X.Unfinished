@@ -2,104 +2,143 @@
 This is a program that allows a magician to select a random or specific card on a computer desktop.
 
 <p>
-  <img src="./image/showcase.gif" width="600">
+  <img src="./image/showcase.gif" width="800">
 </p>
 
+<br>
+
 ## 🛠️ Why I Built This
+- There are times that I forget to bring my cards, which makes me wonder if I can do a magic trick on computer.
+- It’s a good way to learn how Python classes work ... figuring out each one takes time, though (^_^)a.
+- I like fill my desktop with some programs. They look cool.
 
-I’ve always been fascinated by the blend of illusion and technology — this project brings both together.
-It’s not just a card generator — it’s a stage for digital magic, letting magicians perform with precision and surprise, right from their screen.
+<br>
 
-🧩 Features
+## 🧩 Features
 
-🪄 Interactive Card System – Click, drag, flip, and delete cards naturally on your desktop
-🎴 Group Spread Animation – Generate and spread cards with smooth animations
-🃏 Smart Deck Control – Spawn random or specific cards, manage used/unused cards automatically
-✨ Star Effect – Beautiful particle animation when a card disappears
-🌊 Wave Motion – Hover the mouse to make the card group ripple dynamically
-🔁 Stack & Flip – Instantly pile cards together or reveal them all
-💡 Value Listing – Show all cards of the same value with one click
-⌨️ Keyboard Shortcuts – Fast access to every function for live magic shows
-🎬 No-Window Mode – Seamlessly overlay on desktop for a clean performance look
+- 🪄 Interactive Cards – Click, drag, flip, and delete cards naturally on your desktop
+- 🃏 Spread & Stack – Instantly pile cards together or reveal them all
+- ✨ Star Effect – Beautiful particle animation when a card disappears  
+- 🌊 Wave Motion – Hover the mouse to make the card group ripple dynamically  
+- 🎲 Smart Deck Spawn – Spawn card in a random or specific order
+- 📃 Card Listing – Show all the cards of the same suit or value
+- ⌨️ Keyboard Shortcuts – Quickly access all features during live magic performances
 
-📂 Project Structure
+<br>
 
+## 📂 Project Structure  
+```
 Desktop Card/
-├── image/         # Card assets (fronts and backs)
-├── card.py        # Core classes: Drag, Box, Group, Card
-├── card_button.py    # Launcher / control window
-├── card_box.png     # Card box image
-├── back.png       # Card back image
-├── LICENSE       # License file
-└── README.md      # Project documentation
+├── image/
+│   ├── button/           # Button graphics
+│   ├── card/             # Card and box graphics
+│   └── showcase.gif      # Demonstration gif
+├── card.py               # Window and classes  (Drag, Box, Group, Card)
+├── card_button.py        # Launch button
+├── LICENSE               # MIT license
+└── README.md             # Project documentation
+```
 
-⚙️ Requirements
+<br>
 
-Before running, install dependencies:
+## ⚙️ Requirements
+Install dependencies before running:
+```bash
+pip install pillow opencv-python numpy
+```
 
-pip install pillow
+<br>
 
-▶️ How to Run
+## ▶️ How to Run
+1. Make sure the folder /image/card contains 54 card faces, one back image, and one box image.
+2. Make sure the folder /image/button contains the three button states (gray, orange, and white).
+3. Launch the program:
+   ```bash
+   python card_button.py
+   ```
+4. Click the spade-shaped button to toggle the main card window. 
 
-Make sure your /image/card folder contains all 52 cards and a back image.
+<br>
 
-Launch the program:
+## 💻 Keyboard and Mouse Controls
+### [Keyboard]
+**Basic Operations:**
+| Key | Action |
+|-----|--------|
+| `E`        | Spawn a card |
+| `R`        | Reset box position |
+| `D`        | Delete a card |
+| `F`        | Flip a card |
+| `Ctrl + E` | Stack the card group |
+| `Ctrl + R` | Close the window |
+| `Ctrl + D` | Delete the card group |
+| `Ctrl + F` | Flip the card group |
+| `Ctrl + shift + D` | Delete all cards |
+| `Ctrl + shift + F` | Flip all cards |
 
-python card_button.py
+<br>
 
+**Create a Card Spread:**
+| Key | Action |
+|-----|--------|
+| `W` | Spawn an **unstored** card spread with all cards |
+| `S` | Spawn a **stored** card spread with all cards |
+| `Z` | Spawn a stored card spread with all **spade** cards |
+| `X` | Spawn a stored card spread with all **diamond** cards |
+| `C` | Spawn a stored card spread with all **club** cards |
+| `V` | Spawn a stored card spread with all **heart** cards |
 
-A small, frameless window will appear at the bottom center of the screen — click to spawn your deck and begin your performance.
+*(**+Ctrl:** delete used cards, **+Shift:** face-up)*
 
-🖱️ Mouse Actions
-Button	Object	Action
-Left Click	Box	Spawn a random card
-Middle Click	Box	Reset box position
-Right Click	Box	Spread group of cards
-Left Click	Group	Flip all cards in group
-Middle Click	Group	Delete group
-Right Click	Group	Stack / Unstack cards
-Left Click	Card	Flip the card
-Middle Click	Card	Delete card
-Right Click	Card	Show all cards of same value
-⌨️ Hotkeys
-Key	Action
-E	Spawn single card
-R	Reset box position
-Ctrl + R	Exit program
-D	Delete selected card
-F	Flip selected card
-Ctrl + E	Stack / Unstack all
-Ctrl + D	Delete card group
-Ctrl + F	Flip card group
-Shift + D	Delete all cards
-Shift + F	Flip all cards
-W / S	Spread all cards (random order)
-Z / X / C / V	Spread by suit (spade, diamond, club, heart)
-A / J / Q / K / L / 0–9	Show all cards of the same value
-Ctrl + (key)	Apply action to all used cards
-Shift + (key)	Perform with all cards face-up
-🎨 Visual Effects
+<br>
 
-✨ Star Effect – Card deletion leaves behind glowing particles
-🌊 Wave Effect – Hover over cards to see them ripple smoothly
-🎬 Card Rise – Cards float upward when drawn
-🔄 Flip Animation – Realistic shrinking and expanding flip motion
+**Display Cards by Value:**
+| Key | Action |
+|-----|--------|
+| `0`   | Spawn four **10s** |
+| `1`   | Spawn four **Aces** |
+| `2–9` | Spawn four cards of the corresponding number |
+| `A`   | Spawn four **Aces** |
+| `J`   | Spawn four **Jacks** |
+| `Q`   | Spawn four **Queens** |
+| `K`   | Spawn four **Kings** |
+| `L`   | Spawn two **Jokers** |
 
-🧠 Class Overview
-Drag (base draggable class)
- ├── Box – controls deck and spawns cards
- ├── Group – manages card groups and wave effects
- └── Card – handles flipping, deleting, and animations
+---
 
-💡 Tips for Magicians
+### [Mouse]
+**Drag:**  
+Right-click and drag to move an item.
 
-Use Ctrl and Shift modifiers creatively for live tricks.
+<br>
 
-Keep only one focus_box active for smoother performance.
+**Click:**
+| button \ item | Card                 | Spread Bar                  | Box |
+|---------------|----------------------|-----------------------------|-----|
+| left          | Flip a card          | Flip cards in card spread   | Spawn a card |
+| middle        | Delete a card        | Delete cards in card spread | Reset box position |
+| right         | Spawn four of a kind | Stack cards in card spread  | Spawn a card spread |
 
-Combine wave and star effects for visual “reveal” moments.
+<br>
 
-📜 License
+## 📋 Class Overview
+**Drag** (base draggable class)  
+ ├── **Box** (controls card spawning)  
+ ├── **Group** (manages card groups)  
+ └── **Card** (handles card behaviors)  
 
-This project is released under the MIT License.
-You are free to modify and use it for learning, personal, or performance purposes.
+<br>
+
+## 💡 Tips for Magicians
+- Use the card spread to ask the spectator to pick a random card.
+- Demonstrate how messy a shuffled deck can be compared to an ordered deck.
+- Keep cards on the screen to remember the spectator’s card or a prediction.
+
+<br>
+
+## 📜 License
+This project is released under the MIT License.  
+You are free to modify and use it for learning, personal, or performance purposes.  
+
+**Making this program work felt like a miracle to me — now it’s your turn to make the magic happen.**
+
