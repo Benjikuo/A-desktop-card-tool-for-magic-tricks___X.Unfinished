@@ -30,16 +30,18 @@ class Drag:
         self.w = w
         self.h = h
 
-        self.canva.tag_bind(self.item_id, "<Button-1>", self._start_drag)
+        for btn in ("<Button-1>", "<Button-2>", "<Button-3>"):
+            self.canva.tag_bind(self.item_id, btn, self._set_focus)
+
+        self.canva.tag_bind(self.item_id, "<Button-1>", self._start_drag, add="+")
         self.canva.tag_bind(self.item_id, "<B1-Motion>", self._on_drag)
         self.canva.tag_bind(self.item_id, "<ButtonRelease-1>", self._stop_drag)
-        self.canva.tag_bind(self.item_id, "<Button-2>", lambda e: self.middle_click(e))
-        self.canva.tag_bind(self.item_id, "<Button-3>", lambda e: self.right_click(e))
-
-        for btn in ("<Button-1>", "<Button-2>", "<Button-3>"):
-            self.canva.tag_bind(self.item_id, btn, self._set_focus, add="+")
-
-        self._set_focus()
+        self.canva.tag_bind(
+            self.item_id, "<Button-2>", lambda e: self.middle_click(e), add="+"
+        )
+        self.canva.tag_bind(
+            self.item_id, "<Button-3>", lambda e: self.right_click(e), add="+"
+        )
 
     def _set_focus(self, event=None):
         global focus_box, focus_group, focus_card
@@ -47,17 +49,14 @@ class Drag:
             focus_box = self
             focus_group = None
             focus_card = None
-            print("🎯 Focused: Box")
         elif isinstance(self, Group):
             focus_box = self.box
             focus_group = self
             focus_card = None
-            print("🎯 Focused: Group")
         elif isinstance(self, Card):
             focus_box = self.box
             focus_group = self.group
             focus_card = self
-            print(f"🎯 Focused: Card {self.card_name}")
 
     def _start_drag(self, event):
         self.start_x, self.start_y = event.x, event.y
@@ -127,7 +126,8 @@ class Box(Drag):
         self.canva.coords(self.item_id, self.item_x, self.item_y)
 
     def spawn_card(self, event=None):
-        if not self.unused_card_names or self.spreading:
+        if self.spreading or not self.unused_card_names:
+            no_card(canva, self.item_x, self.item_y - 25)
             return
 
         card_name = random.choice(list(self.unused_card_names))
@@ -144,6 +144,11 @@ class Box(Drag):
         self.take_card(card_name, card)
         self.canva.tag_raise(self.item_id)
         card.up()
+
+        global focus_box, focus_group, focus_card
+        focus_box = self
+        focus_group = None
+        focus_card = card
 
     def delete_card(self, targets):
         def delete_next(i):
@@ -178,7 +183,7 @@ class Box(Drag):
         if delete_used:
             from_group = self.all_cards.copy()
         else:
-            from_group = self.unused_card_names
+            from_group = self.unused_card_names.copy()
 
         if group == "all":
             available = list(from_group)
@@ -195,21 +200,31 @@ class Box(Drag):
 
         if not available:
             print("⚠️ All cards have been generated!")
+            no_card(canva, self.item_x, self.item_y - 25)
+            self.spreading = False
             return
 
-        Group(self.canva, self, self.back_img, available, sort, face_up)
+        group = Group(self.canva, self, self.back_img, available, sort, face_up)
+
+        global focus_box, focus_group, focus_card
+        focus_box = self
+        focus_group = group
+        focus_card = None
 
     def list_card_value(self, card_name, delete_used=True, face_up=True):
         if delete_used:
             from_group = self.all_cards.copy()
         else:
-            from_group = self.unused_card_names
+            from_group = self.unused_card_names.copy()
 
         if "joker" in card_name:
             available = [name for name in from_group if "joker" in name]
             available.sort()
         else:
             digits = "".join(ch for ch in card_name if ch.isdigit())
+            if digits == "":
+                return
+
             available = []
             for name in from_group:
                 this_digits = "".join(ch for ch in name if ch.isdigit())
@@ -239,8 +254,6 @@ class Box(Drag):
                             self.delete_card([c])
                             print("🟩 Card deleted:", card_name)
                             break
-
-                print("🟩 Total width:", total_width)
 
                 x = (
                     (screen_w - total_width) / 2
@@ -275,7 +288,7 @@ class Group(Drag):
         screen_h = canva.winfo_height()
 
         total_width = CARD_SIZE[0] + (n - 1) * SPREAD_SPACING
-        x = (screen_w - total_width) / 2 - CARD_SIZE[0] / 2
+        x = (screen_w - total_width) / 2 - CARD_SIZE[0] / 2 + 2
         y = screen_h / 2 - CARD_SIZE[1] / 2 + 136
 
         self.w = CARD_SIZE[0] / 4
@@ -298,11 +311,16 @@ class Group(Drag):
         self.spawn_y = self.item_y
         self.face_up = face_up
         self.group_cards = []
+        self.spawning = True
         self.moving = False
         self.flipping = False
         self.stacking = False
         self.stacked = False
         self.drag_box = None
+
+        self.left_click = self.flip_all
+        self.middle_click = self.delete_group
+        self.right_click = self.stack
 
         def standard_sort(name):
             if "joker-(1)" in name:
@@ -322,6 +340,7 @@ class Group(Drag):
             self.available = sorted(available, key=standard_sort)
         else:
             print("⚠️ Invalid sort option:", sort)
+
         self.spread()
 
     def dragging(self, state, card=None):
@@ -378,9 +397,7 @@ class Group(Drag):
             else:
                 self.box.spreading = False
                 self.canva.itemconfig(self.this_group, fill="#222222")
-                self.left_click = self.flip_all
-                self.middle_click = self.delete_group
-                self.right_click = self.stack
+                self.spawning = False
 
         generate_next(0)
 
@@ -406,7 +423,7 @@ class Group(Drag):
         if self.stacked:
             self.stack()
             return
-        if self.flipping or self.stacking:
+        if self.flipping or self.stacking or self.spawning:
             return
 
         self.flipping = True
@@ -427,9 +444,18 @@ class Group(Drag):
         flip_next(0)
 
     def delete_group(self, event=None):
+        if self.spawning:
+            return
+
+        self.canva.delete(self.drag_box)
+        self.drag_box = None
         self.box.delete_card(self.group_cards.copy())
         self.canva.delete(self.this_group)
         Group.instances.remove(self)
+
+        global focus_group, focus_card
+        focus_group = None
+        focus_card = None
 
     def remove_card(self, card):
         self.group_cards.remove(card)
@@ -447,7 +473,7 @@ class Group(Drag):
             )
 
     def stack(self, event=None):
-        if self.flipping or self.stacking:
+        if self.flipping or self.stacking or self.spawning:
             return
 
         self.stacking = True
@@ -615,9 +641,9 @@ class Card(Drag):
         self.flipping = True
         self.animate_scale(0, 16)
 
-    def flip_all(self):
+    def flip_all(self, steps=32):
         self.flipping = True
-        self.animate_scale(0, 32)
+        self.animate_scale(0, steps)
 
     def animate_scale(self, step, total_steps):
         shrink_steps = total_steps / 2
@@ -647,11 +673,30 @@ class Card(Drag):
         return ImageTk.PhotoImage(resized)
 
     def delete(self, event=None, count=10):
+        global focus_card
+        focus_card = None
+
         star_effect(self.canva, self.item_x, self.item_y, count)
         self.box.return_card(self.card_name, self)
         if self.in_spread:
             self.group.remove_card(self)  # type: ignore
+
         self.canva.delete(self.this_card)
+
+
+def no_card(canva, x, y):
+    text = canva.create_text(x, y, text="❌", fill="#FF7777", font=("Arial", 15))
+    canva.tag_raise(text)
+
+    def animate(step):
+        if step < 20:
+            canva.move(text, 0, -3)
+        elif step > 30:
+            canva.delete(text)
+            return
+        canva.after(10, lambda: animate(step + 1))
+
+    animate(0)
 
 
 def star_effect(canva, x, y, count):
@@ -692,91 +737,90 @@ def on_leave(event):
         g.reset_wave()
 
 
-def flip_all_groups():
-    """翻開目前畫面上所有群組的卡片"""
-    for g in Group.instances:
-        g.flip_all()
-    print("🔄 Flipped all cards.")
-
-
 def key_pressed(event):
     global focus_box, focus_group, focus_card
     key = event.keysym.lower()
     ctrl = (event.state & 0x4) != 0
-    print(key, ctrl)
-    spread_by(key, sort="random", face_up=False)
-    if ctrl:
-        if key == "d":  # Ctrl + D → 刪除所有卡
-            for item in canva.find_withtag("card"):
-                x, y = canva.coords(item)
-                star_effect(canva, x, y, 10)
-                canva.delete(item)
-            print("🗑️ Deleted all cards.")
-            return
-
-        elif key == "f":  # Ctrl + F → 翻開所有群組的所有卡
-            for g in Group.instances:
-                g.flip_all()
-            print("🔄 Flipped all cards.")
-            return
-
-        elif key == "s":  # Ctrl + S → 展開整副牌（標準排序）
-            if focus_box:
-                focus_box.spawn_spread(sort="standard", face_up=True)
-                print("🃏 Spread all cards (standard order).")
-            return
-
-    # -------------------------------
-    # 一般快捷鍵（無 Ctrl）
-    # -------------------------------
-    if focus_card:
-        if key == "f":  # 單張卡翻面
-            focus_card.flip()
-            print(f"🔁 Flipped {focus_card.card_name}")
-        elif key == "d":  # 刪除卡片
-            focus_card.delete()
-            print(f"🗑️ Deleted {focus_card.card_name}")
-        elif key == "u":  # 提升卡片動畫
-            focus_card.up()
-            print(f"⬆️ Raised {focus_card.card_name}")
-        return
-
-    if focus_group:
-        if key == "s":  # 疊牌
-            focus_group.stack()
-        elif key == "r":  # 重置波浪
-            focus_group.reset_wave()
-        elif key == "f":  # 翻開整疊
-            focus_group.flip_all()
-        return
+    shift = (event.state & 0x1) != 0
+    actions = {}
 
     if focus_box:
-        if key == "s":  # 展開隨機排序
-            focus_box.spawn_spread(sort="random", face_up=False)
-        elif key == "r":  # 重設盒子位置
-            focus_box.reset_position()
+        actions |= {"e": focus_box.spawn_card, "r": focus_box.reset_position}
+    if focus_card:
+        actions |= {"d": focus_card.delete, "f": focus_card.flip}
+    if ctrl:
+        actions |= {"r": root.destroy}
+        if focus_group:
+            actions |= {
+                "e": focus_group.stack,
+                "d": focus_group.delete_group,
+                "f": focus_group.flip_all,
+            }
+        if shift:
+            actions |= {
+                "d": delete_all_cards,
+                "f": flip_all_cards,
+            }
+
+    func = actions.get(key)
+    if func:
+        func()
         return
 
-
-def spread_by(key, sort, face_up):
-    print(f"🃏 Spread by {key}")
-    global focus_box
     if not focus_box:
         return
 
-    suit_map = {"z": "spade", "x": "diamond", "c": "club", "v": "heart"}
-    value_map = {"a": "1", "0": "10", "j": "11", "q": "12", "k": "13"}
-
+    suit_map = {
+        "w": "all",
+        "s": "all",
+        "z": "spade",
+        "x": "diamond",
+        "c": "club",
+        "v": "heart",
+    }
     if key in suit_map:
-        focus_box.spawn_spread(group=suit_map[key], sort=sort, face_up=face_up)
-        print(f"Spread {suit_map[key]} cards.")
+        focus_box.spawn_spread(
+            group=suit_map[key],
+            sort="random" if key == "w" else "standard",
+            delete_used=ctrl,
+            face_up=shift,
+        )
         return
 
+    value_map = {"a": "1", "0": "10", "j": "11", "q": "12", "k": "13", "l": "joker"}
     if key in value_map:
         key = value_map.get(key)
-
     focus_box.list_card_value(key)
-    print(f"Show all cards with value {key}")
+
+
+def flip_all_cards():
+    if not focus_box or not focus_box.used_card:
+        return
+
+    cards = focus_box.used_card.copy()
+    all_face_up = all(card.face_up for card in cards)
+
+    def flip_next(i, cards):
+        if i < len(cards):
+            if cards[i].face_up == all_face_up:
+                cards[i].flip_all()
+            focus_box.canva.after(50, lambda: flip_next(i + 1, cards))  # type: ignore
+
+    flip_next(0, cards)
+
+
+def delete_all_cards():
+    if not focus_box or not focus_box.used_card:
+        return
+
+    cards = focus_box.used_card.copy()
+
+    def delete_next(i, cards):
+        if i < len(cards):
+            cards[i].delete()
+            focus_box.canva.after(50, lambda: delete_next(i + 1, cards))  # type: ignore
+
+    delete_next(0, cards)
 
 
 def load_image(name, size):
@@ -804,7 +848,8 @@ card_imgs_names = [
     if f.endswith(".png") and f not in ("box.png", "back.png")
 ]
 
-Box(canva, screen_w / 2, screen_h - 108, box_img, back_img, card_imgs_names)
+box = Box(canva, screen_w / 2, screen_h - 108, box_img, back_img, card_imgs_names)
+focus_box = box
 
 root.bind("<Motion>", on_motion)
 root.bind("<Leave>", on_leave)
