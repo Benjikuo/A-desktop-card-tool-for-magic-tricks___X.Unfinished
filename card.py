@@ -1,6 +1,6 @@
 import tkinter as tk
 from PIL import Image, ImageTk
-import os, random, math, time
+import os, random, math
 
 BG_COLOR = "#000000"
 CARD_FOLDER = "image/card"
@@ -817,7 +817,7 @@ def delete_all_cards():
 
     def delete_next(i, cards):
         if i < len(cards):
-            cards[i].delete()
+            cards[i].delete(count=5)
             focus_box.canva.after(50, lambda: delete_next(i + 1, cards))  # type: ignore
 
     delete_next(0, cards)
