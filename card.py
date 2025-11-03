@@ -185,18 +185,17 @@ class Box(Drag):
         else:
             from_group = self.unused_card_names.copy()
 
+        available = []
         if group == "all":
             available = list(from_group)
-        elif group == "spade":
-            available = [name for name in from_group if "spade" in name]
-        elif group == "diamond":
-            available = [name for name in from_group if "diamond" in name]
-        elif group == "club":
-            available = [name for name in from_group if "club" in name]
-        elif group == "heart":
-            available = [name for name in from_group if "heart" in name]
-        else:
-            available = []
+        if group == "black" or group == "spade":
+            available += [name for name in from_group if "spade" in name]
+        if group == "black" or group == "club":
+            available += [name for name in from_group if "club" in name]
+        if group == "red" or group == "diamond":
+            available += [name for name in from_group if "diamond" in name]
+        if group == "red" or group == "heart":
+            available += [name for name in from_group if "heart" in name]
 
         if not available:
             print("⚠️ All cards have been generated!")
@@ -778,6 +777,8 @@ def key_pressed(event):
         "x": "diamond",
         "c": "club",
         "v": "heart",
+        "g": "red",
+        "b": "black",
     }
     if key in suit_map:
         focus_box.spawn_spread(
