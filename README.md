@@ -87,6 +87,8 @@ pip install pillow
 | `X` | Spawn a stored card spread with all **diamond** cards |
 | `C` | Spawn a stored card spread with all **club** cards |
 | `V` | Spawn a stored card spread with all **heart** cards |
+| `G` | Spawn a stored card spread with all **red** cards |
+| `B` | Spawn a stored card spread with all **black** cards |
 
 *(**+Ctrl:** delete used cards, **+Shift:** face-up)*
 
