@@ -1,6 +1,6 @@
 import tkinter as tk
 from PIL import Image, ImageTk
-import os, random, math
+import os, random, math, time
 
 BG_COLOR = "#000000"
 CARD_FOLDER = "image/card"
@@ -452,6 +452,7 @@ class Group(Drag):
         self.box.delete_card(self.group_cards.copy())
         self.canva.delete(self.this_group)
         Group.instances.remove(self)
+        del self
 
         global focus_group, focus_card
         focus_group = None
@@ -682,6 +683,7 @@ class Card(Drag):
             self.group.remove_card(self)  # type: ignore
 
         self.canva.delete(self.this_card)
+        del self
 
 
 def no_card(canva, x, y):
@@ -720,9 +722,8 @@ def star_effect(canva, x, y, count):
 
 
 def move_star(canva, star, dx, dy, step):
-    if step > 80:
+    if step > 60:
         return
-
     canva.move(star, dx / (10 + step * 2), dy / (10 + step * 2))
     canva.after(10, lambda: move_star(canva, star, dx, dy, step + 1))
 
