@@ -15,10 +15,10 @@ NO_WAVE_RANGE = 60
 focus_box = None
 focus_group = None
 focus_card = None
+list_card = None
 
 
 class Drag:
-
     def __init__(self, canva, x, y, item_id, w=None, h=None):
         self.canva = canva
         self.item_id = item_id
@@ -44,7 +44,7 @@ class Drag:
         )
 
     def _set_focus(self, event=None):
-        global focus_box, focus_group, focus_card
+        global focus_box, focus_group, focus_card, list_card
         if isinstance(self, Box):
             focus_box = self
             focus_group = None
@@ -57,6 +57,7 @@ class Drag:
             focus_box = self.box
             focus_group = self.group
             focus_card = self
+            list_card = None
 
     def _start_drag(self, event):
         self.start_x, self.start_y = event.x, event.y
@@ -106,6 +107,9 @@ class Drag:
 
 class Box(Drag):
     def __init__(self, canva, x, y, box_img, back_img, card_imgs_names):
+        global focus_box
+        focus_box = self
+
         self.box_img = box_img
         self.this_box = canva.create_image(x, y, image=self.box_img, tags="box")
         super().__init__(canva, x, y, self.this_box)
@@ -115,6 +119,7 @@ class Box(Drag):
         self.unused_card_names = set(card_imgs_names)
         self.used_card = []
         self.spreading = False
+        self.list_card = None
 
         self.left_click = self.spawn_card
         self.middle_click = self.reset_position
@@ -188,13 +193,13 @@ class Box(Drag):
         available = []
         if group == "all":
             available = list(from_group)
-        if group == "black" or group == "spade":
+        if group == "no_joker" or group == "black" or group == "spade":
             available += [name for name in from_group if "spade" in name]
-        if group == "black" or group == "club":
+        if group == "no_joker" or group == "black" or group == "club":
             available += [name for name in from_group if "club" in name]
-        if group == "red" or group == "diamond":
+        if group == "no_joker" or group == "red" or group == "diamond":
             available += [name for name in from_group if "diamond" in name]
-        if group == "red" or group == "heart":
+        if group == "no_joker" or group == "red" or group == "heart":
             available += [name for name in from_group if "heart" in name]
 
         if not available:
@@ -216,14 +221,20 @@ class Box(Drag):
         else:
             from_group = self.unused_card_names.copy()
 
+        global list_card
         if "joker" in card_name:
+            if list_card == "joker":
+                return
+
+            list_card = "joker"
             available = [name for name in from_group if "joker" in name]
             available.sort()
         else:
             digits = "".join(ch for ch in card_name if ch.isdigit())
-            if digits == "":
+            if digits == "" or list_card == digits:
                 return
 
+            list_card = digits
             available = []
             for name in from_group:
                 this_digits = "".join(ch for ch in name if ch.isdigit())
@@ -321,7 +332,7 @@ class Group(Drag):
         self.middle_click = self.delete_group
         self.right_click = self.stack
 
-        def standard_sort(name):
+        def standard_stack(name):
             if "joker-(1)" in name:
                 return (-1, -1)
             if "joker-(2)" in name:
@@ -329,14 +340,41 @@ class Group(Drag):
 
             order = ["spade", "diamond", "club", "heart"]
             suit = next(i for i, s in enumerate(order) if s in name)
-            digits = "".join(ch for ch in name if ch.isdigit())
-            rank = int(digits)
-            return (suit, rank)
+            digits = int("".join(ch for ch in name if ch.isdigit()))
+            return (suit, digits)
+
+        def si_stebbins_stack(name):
+            if "joker" in name:
+                return (99, 99)
+            order = ["club", "heart", "spade", "diamond"]
+            suit = next(i for i, s in enumerate(order) if s in name)
+            digits = int("".join(ch for ch in name if ch.isdigit()))
+            return ((14 - digits + suit * 3) % 13, suit)
+
+        def eight_kings_stack(name):
+            if "joker" in name:
+                return (99, 99)
+            suit_order = ["club", "heart", "spade", "diamond"]
+            number_order = [8, 13, 3, 10, 2, 7, 9, 5, 12, 4, 1, 6, 11]
+            suit = next(i for i, s in enumerate(suit_order) if s in name)
+            digits = int("".join(ch for ch in name if ch.isdigit()))
+            rank = number_order.index(digits)
+            new_suit = (suit - rank) % 4
+            return (new_suit, rank)
+
+        def color_mirror_stack(available):
+            return 1
 
         if sort == "random":
             self.available = random.sample(available.copy(), len(available))
         elif sort == "standard":
-            self.available = sorted(available, key=standard_sort)
+            self.available = sorted(available, key=standard_stack)
+        elif sort == "si_stebbins":
+            self.available = sorted(available, key=si_stebbins_stack)
+        elif sort == "eight_kings":
+            self.available = sorted(available, key=eight_kings_stack)
+        elif sort == "color_mirror":
+            self.available = color_mirror_stack(available)
         else:
             print("⚠️ Invalid sort option:", sort)
 
@@ -750,6 +788,7 @@ def key_pressed(event):
         actions |= {"d": focus_card.delete, "f": focus_card.flip}
     if ctrl:
         actions |= {"r": root.destroy}
+
         if focus_group:
             actions |= {
                 "e": focus_group.stack,
@@ -781,7 +820,7 @@ def key_pressed(event):
         "b": "black",
     }
     if key in suit_map:
-        focus_box.spawn_spread(
+        focus_box.spawn_spread(  # type: ignore
             group=suit_map[key],
             sort="random" if key == "w" else "standard",
             delete_used=ctrl,
@@ -789,17 +828,36 @@ def key_pressed(event):
         )
         return
 
+    special_map = {
+        "1": "si_stebbins",
+        "2": "eight_kings",
+        "3": "color_mirror",
+        "exclam": "si_stebbins",
+        "at": "eight_kings",
+        "numbersign": "color_mirror",
+    }
+    if key in special_map:
+        stack_type = special_map[key]
+        if ctrl:
+            focus_box.spawn_spread(  # type: ignore
+                group="all",
+                sort=stack_type,
+                delete_used=True,
+                face_up=shift,
+            )
+            return
+
     value_map = {"a": "1", "0": "10", "j": "11", "q": "12", "k": "13", "l": "joker"}
     if key in value_map:
         key = value_map.get(key)
-    focus_box.list_card_value(key)
+    focus_box.list_card_value(key)  # type: ignore
 
 
 def flip_all_cards():
-    if not focus_box or not focus_box.used_card:
+    if not focus_box or not focus_box.used_card:  # type: ignore
         return
 
-    cards = focus_box.used_card.copy()
+    cards = focus_box.used_card.copy()  # type: ignore
     all_face_up = all(card.face_up for card in cards)
 
     def flip_next(i, cards):
@@ -812,10 +870,10 @@ def flip_all_cards():
 
 
 def delete_all_cards():
-    if not focus_box or not focus_box.used_card:
+    if not focus_box or not focus_box.used_card:  # type: ignore
         return
 
-    cards = focus_box.used_card.copy()
+    cards = focus_box.used_card.copy()  # type: ignore
 
     def delete_next(i, cards):
         if i < len(cards):
@@ -850,7 +908,7 @@ card_imgs_names = [
     if f.endswith(".png") and f not in ("box.png", "back.png")
 ]
 
-box = Box(canva, screen_w / 2, screen_h - 108, box_img, back_img, card_imgs_names)
+box = Box(canva, screen_w / 2, screen_h - 107, box_img, back_img, card_imgs_names)
 focus_box = box
 
 root.bind("<Motion>", on_motion)
