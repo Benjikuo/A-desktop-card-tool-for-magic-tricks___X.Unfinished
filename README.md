@@ -143,9 +143,9 @@ Right-click and drag to move an item.
 <br>
 
 ## 💡 Tips for Magicians
-- Use the card spread to ask the spectator to pick a random card.
-- Keep cards on the screen to remember the spectator’s card or a prediction.
-- Through a built-in stack system, the magician can determine the spectator’s chosen card by using a specially arranged card order.
+- Use the card spread to let the spectator pick a random card.
+- Keep the cards visible on screen to help magician remember the spectator’s card or your prediction.
+- Through the stack system, the magician can identify the spectator’s card or determine its position in the deck.
 
 <br>
 
