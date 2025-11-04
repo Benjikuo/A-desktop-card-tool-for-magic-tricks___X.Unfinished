@@ -94,6 +94,17 @@ pip install pillow
 
 <br>
 
+**Create a Magic Stack:**
+| Key | Action |
+|-----|--------|
+| `Ctrl + 1` | Spawn a **Si Stebbins** stack |
+| `Ctrl + 2` | Spawn a **Eight Kings** stack |
+| `Ctrl + 3` | Spawn a **color mirror** stack |
+
+*(**+Shift:** face-up)*
+
+<br>
+
 **Display Cards by Value:**
 | Key | Action |
 |-----|--------|
@@ -132,9 +143,9 @@ Right-click and drag to move an item.
 <br>
 
 ## 💡 Tips for Magicians
-- Use the card spread to ask the spectator to pick a random card.
-- Demonstrate how messy a shuffled deck can be compared to an ordered deck.
-- Keep cards on the screen to remember the spectator’s card or a prediction.
+- Use the card spread to let the spectator pick a random card.
+- Keep the cards visible on screen to help magician remember the spectator’s card or your prediction.
+- Through the stack system, the magician can identify the spectator’s card or determine its position in the deck.
 
 <br>
 
