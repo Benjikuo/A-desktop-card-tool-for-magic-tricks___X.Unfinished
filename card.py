@@ -363,7 +363,31 @@ class Group(Drag):
             return (new_suit, rank)
 
         def color_mirror_stack(available):
-            return 1
+            available = random.sample(available.copy(), len(available))
+            color = {
+                "club": "spade",
+                "spade": "club",
+                "heart": "diamond",
+                "diamond": "heart",
+                "joker-(1)": "joker-(2)",
+                "joker-(2)": "joker-(1)",
+            }
+            for i in range(len(available) // 2):
+                pos = available[i]
+                for suit in color:
+                    if suit in pos:
+                        target = pos.replace(suit, color[suit])
+                        break
+
+                for j in range(i + 1, len(available)):
+                    if available[j] == target:  # type: ignore
+                        available[j], available[len(available) // 2 + i] = (
+                            available[len(available) // 2 + i],
+                            available[j],
+                        )
+                        break
+
+            return available
 
         if sort == "random":
             self.available = random.sample(available.copy(), len(available))
@@ -418,7 +442,7 @@ class Group(Drag):
     def spread(self):
         def generate_next(step):
             if self.available:
-                card_name = self.available.pop(0)
+                card_name = self.available.pop(0)  # type: ignore
                 if card_name not in self.box.unused_card_names:
                     for c in self.box.used_card:
                         if c.card_name == card_name:
