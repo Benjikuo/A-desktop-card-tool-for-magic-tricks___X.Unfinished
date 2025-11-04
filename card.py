@@ -696,8 +696,6 @@ class Card(Drag):
             self.in_spread = False
             self.group.remove_card(self)  # type: ignore
             self.up()
-            if not self.face_up:
-                self.canva.after(200, self.flip)
             return
 
         self.flipping = True
