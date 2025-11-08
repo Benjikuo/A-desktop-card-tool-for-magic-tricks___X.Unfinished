@@ -15,7 +15,6 @@ This is a program that allows a magician to select a random or specific card on 
 <br>
 
 ## 🧩 Features
-
 - 🪄 **Interactive Cards** – Click, drag, flip, and delete cards naturally on your desktop
 - 🃏 **Spread & Stack** – Instantly pile cards together or reveal them all
 - ✨ **Star Effect** – Beautiful particle animation when a card disappears  
