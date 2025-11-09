@@ -362,31 +362,52 @@ class Group(Drag):
             new_suit = (suit - rank) % 4
             return (new_suit, rank)
 
-        def color_mirror_stack(available):
+        def mirror_stack(available, suit, rank):
             available = random.sample(available.copy(), len(available))
             color = {
                 "club": "spade",
                 "spade": "club",
                 "heart": "diamond",
                 "diamond": "heart",
-                "joker-(1)": "joker-(2)",
-                "joker-(2)": "joker-(1)",
+            }
+            number = {
+                "(1)": "(13)",
+                "(2)": "(12)",
+                "(3)": "(11)",
+                "(4)": "(10)",
+                "(5)": "(9)",
+                "(6)": "(8)",
+                "(7)": "(7)",
+                "(8)": "(6)",
+                "(9)": "(5)",
+                "(10)": "(4)",
+                "(11)": "(3)",
+                "(12)": "(2)",
+                "(13)": "(1)",
             }
             for i in range(len(available) // 2):
-                pos = available[i]
-                for suit in color:
-                    if suit in pos:
-                        target = pos.replace(suit, color[suit])
-                        break
+                target = available[i]
+                if "joker" in target:
+                    target = "joker-(2).png" if "1" in target else "joker-(1).png"
+                else:
+                    if suit:
+                        for c in color:
+                            if c in target:
+                                target = target.replace(c, color[c])
+                                break
+                    if rank:
+                        for n in number:
+                            if n in target:
+                                target = target.replace(n, number[n])
+                                break
 
                 for j in range(i + 1, len(available)):
-                    if available[j] == target:  # type: ignore
+                    if available[j] == target:
                         available[j], available[len(available) // 2 + i] = (
                             available[len(available) // 2 + i],
                             available[j],
                         )
                         break
-
             return available
 
         if sort == "random":
@@ -398,7 +419,11 @@ class Group(Drag):
         elif sort == "eight_kings":
             self.available = sorted(available, key=eight_kings_stack)
         elif sort == "color_mirror":
-            self.available = color_mirror_stack(available)
+            self.available = mirror_stack(available, True, False)
+        elif sort == "number_mirror":
+            self.available = mirror_stack(available, False, True)
+        elif sort == "color_number_mirror":
+            self.available = mirror_stack(available, True, True)
         else:
             print("⚠️ Invalid sort option:", sort)
 
@@ -854,9 +879,12 @@ def key_pressed(event):
         "1": "si_stebbins",
         "2": "eight_kings",
         "3": "color_mirror",
+        "4": "number_mirror",
         "exclam": "si_stebbins",
         "at": "eight_kings",
         "numbersign": "color_mirror",
+        "dollar": "number_mirror",
+        "q": "color_number_mirror",
     }
     if key in special_map:
         stack_type = special_map[key]
