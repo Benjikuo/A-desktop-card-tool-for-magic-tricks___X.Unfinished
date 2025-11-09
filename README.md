@@ -99,6 +99,8 @@ pip install pillow
 | `Ctrl + 1` | Spawn a **Si Stebbins** stack |
 | `Ctrl + 2` | Spawn a **Eight Kings** stack |
 | `Ctrl + 3` | Spawn a **color mirror** stack |
+| `Ctrl + 4` | Spawn a **number mirror** stack |
+| `Ctrl + Q` | Spawn a **color and number mirror** stack |
 
 *(**+Shift:** face-up)*
 
