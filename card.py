@@ -79,15 +79,15 @@ class Drag:
                 self.canva.coords(self.item_id, x, y, x + self.w, y + self.h)
             else:
                 self.canva.coords(self.item_id, x, y)
+
+            self.item_x = x
+            self.item_y = y
+            self.start_x, self.start_y = event.x, event.y
             self.dragged = True
-        else:
-            self.dragged = False
 
     def _stop_drag(self, event):
         if self.dragged:
             self.dragging(False)
-            self.item_x += self.dx
-            self.item_y += self.dy
             self.dragged = False
         else:
             self.left_click(event)
@@ -317,8 +317,6 @@ class Group(Drag):
         super().__init__(canva, x, y, self.this_group, self.w, self.h)
         Group.instances.append(self)
         self.back_img = back_img
-        self.spawn_x = self.item_x
-        self.spawn_y = self.item_y
         self.face_up = face_up
         self.group_cards = []
         self.spawning = True
@@ -429,8 +427,15 @@ class Group(Drag):
 
         self.spread()
 
-    def dragging(self, state, card=None):
+    def dragging(self, state):
         if state:
+            for c in self.group_cards:
+                x = c.item_x + self.dx
+                y = c.item_y + self.dy
+                c.canva.coords(c.this_card, x, y)
+                c.item_x = x
+                c.item_y = y
+
             x1, y1 = self.canva.coords(self.group_cards[0].this_card)
             x2, y2 = self.canva.coords(self.group_cards[-1].this_card)
 
@@ -452,17 +457,12 @@ class Group(Drag):
                 )
             else:
                 self.canva.coords(self.drag_box, x1, y1, x2, y2)
+
         else:
-            self.spawn_x += self.dx
-            self.spawn_y += self.dy
-            if self.drag_box:
-                self.canva.delete(self.drag_box)
-                self.drag_box = None
+            self.canva.delete(self.drag_box)
+            self.drag_box = None
 
         self.moving = state
-        target_cards = card if card is not None else self.group_cards
-        for i in target_cards:
-            i.move_card(self.dx, self.dy, state)
 
     def spread(self):
         def generate_next(step):
@@ -476,8 +476,8 @@ class Group(Drag):
                             break
 
                 front_img = load_image(card_name, CARD_SIZE)
-                x = self.spawn_x + CARD_SIZE[0] / 2 + 35 + step * SPREAD_SPACING
-                y = self.spawn_y + CARD_SIZE[1] / 2
+                x = self.item_x + CARD_SIZE[0] / 2 + 35 + step * SPREAD_SPACING
+                y = self.item_y + CARD_SIZE[1] / 2
                 self.spawn_card(front_img, card_name, x, y, face_up=self.face_up)
                 self.canva.after(50, lambda s=step + 1: generate_next(s))
             else:
@@ -500,8 +500,6 @@ class Group(Drag):
             in_spread=True,
             face_up=face_up,
         )
-        if self.moving:
-            self.dragging(True, [card])
         self.box.take_card(card_name, card)
         self.group_cards.append(card)
 
@@ -564,28 +562,33 @@ class Group(Drag):
             return
 
         self.stacking = True
-        self.draggable = False
         self.canva.itemconfig(self.this_group, fill="#111111")
-        x0, y0 = self.canva.coords(self.group_cards[0].this_card)
-        y0 = self.item_y + CARD_SIZE[1] / 2
         if self.stacked:
             for i, card in enumerate(self.group_cards):
 
                 def move_to_spread(step, c, i, target_step=50):
-                    tx = x0 + i * 20
-                    ty = y0
+                    if self.drag_box:
+                        x1, y1 = self.canva.coords(self.group_cards[0].this_card)
+                        x2, y2 = self.canva.coords(self.group_cards[-1].this_card)
+                        x1 -= CARD_SIZE[0] / 2
+                        x2 += CARD_SIZE[0] / 2
+                        y1 -= CARD_SIZE[1] / 2
+                        y2 += CARD_SIZE[1] / 2
+                        self.canva.coords(self.drag_box, x1, y1, x2, y2)
+
+                    tx = self.item_x + CARD_SIZE[0] / 2 + 35 + i * SPREAD_SPACING
+                    ty = self.item_y + CARD_SIZE[1] / 2
                     if step < target_step:
                         c.item_x += (tx - c.item_x) / 8
                         c.item_y += (ty - c.item_y) / 8
                         c.canva.coords(c.this_card, c.item_x, c.item_y)
-                        c.canva.after(8, lambda s=step + 1: move_to_spread(s, c, i))
+                        c.canva.after(10, lambda s=step + 1: move_to_spread(s, c, i))
                     else:
                         c.item_x = tx
                         c.item_y = ty
                         c.canva.coords(c.this_card, c.item_x, c.item_y)
                         if card == self.group_cards[-1]:
                             self.stacking = False
-                            self.draggable = True
                             self.canva.itemconfig(self.this_group, fill="#333333")
 
                 move_to_spread(0, card, i)
@@ -593,14 +596,25 @@ class Group(Drag):
             for card in self.group_cards:
 
                 def move_to_stack(step, c, target_step=50):
+                    if self.drag_box:
+                        x1, y1 = self.canva.coords(self.group_cards[0].this_card)
+                        x2, y2 = self.canva.coords(self.group_cards[-1].this_card)
+                        x1 -= CARD_SIZE[0] / 2
+                        x2 += CARD_SIZE[0] / 2
+                        y1 -= CARD_SIZE[1] / 2
+                        y2 += CARD_SIZE[1] / 2
+                        self.canva.coords(self.drag_box, x1, y1, x2, y2)
+
+                    tx = self.item_x + CARD_SIZE[0] / 2 + 35
+                    ty = self.item_y + CARD_SIZE[1] / 2
                     if step < target_step:
-                        c.item_x -= (c.item_x - x0) / 8
-                        c.item_y -= (c.item_y - y0) / 8
+                        c.item_x -= (c.item_x - tx) / 8
+                        c.item_y -= (c.item_y - ty) / 8
                         c.canva.coords(c.this_card, c.item_x, c.item_y)
-                        c.canva.after(8, lambda s=step + 1: move_to_stack(s, c))
+                        c.canva.after(10, lambda s=step + 1: move_to_stack(s, c))
                     else:
-                        c.item_x = x0
-                        c.item_y = y0
+                        c.item_x = tx
+                        c.item_y = ty
                         c.canva.coords(c.this_card, c.item_x, c.item_y)
                         if card == self.group_cards[-1]:
                             self.stacking = False
@@ -685,17 +699,6 @@ class Card(Drag):
         if self.in_spread:
             self.in_spread = False
             self.group.remove_card(self)  # type: ignore
-
-    def move_card(self, dx, dy, state):
-        if not self.in_spread:
-            return
-
-        if state:
-            self.canva.coords(self.this_card, self.item_x + dx, self.item_y + dy)
-        else:
-            self.item_x += dx
-            self.item_y += dy
-            self.canva.coords(self.this_card, self.item_x, self.item_y)
 
     def up(self):
         total_steps = 12
