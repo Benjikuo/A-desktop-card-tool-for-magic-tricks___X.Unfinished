@@ -168,6 +168,7 @@ Right-click and drag to move an item.
 - Keep the cards visible on screen to help magician remember the spectator’s card or your prediction.
 - Through the stack system, the magician can identify the spectator’s card or determine its position in the deck.
 - Using a secret card-swap method, the magician ensures the spectator always chooses the target card.
+- Make the card in the stack face the same direction secretly using the assigned hotkey.
 
 <br>
 
