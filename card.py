@@ -124,7 +124,7 @@ class Box(Drag):
 
         self.left_click = self.spawn_card
         self.middle_click = self.reset_position
-        self.right_click = self.spawn_spread
+        self.right_click = lambda e: self.spawn_spread(e, face_up=False)  # type: ignore
 
     def reset_position(self, event=None):
         self.item_x = self.initial_x
@@ -179,7 +179,7 @@ class Box(Drag):
         group="all",
         sort="random",
         delete_used=True,
-        face_up=False,
+        face_up=None,
     ):
         if self.spreading:
             return
@@ -489,10 +489,10 @@ class Group(Drag):
                         self.target_suit = "heart"
                         self.set_target_card = 2
                     elif self.item_y < up + block * 5:
-                        swap_target_name = "joker-(1).png"
+                        set_target("joker-(1).png")
                         self.set_target_card = 0
                     else:
-                        swap_target_name = "joker-(2).png"
+                        set_target("joker-(2).png")
                         self.set_target_card = 0
                     print(self.target_suit, swap_target_name)
 
@@ -527,7 +527,7 @@ class Group(Drag):
                     else:
                         n += 3
 
-                    swap_target_name = self.target_suit + "-(" + str(n) + ").png"
+                    set_target(self.target_suit + "-(" + str(n) + ").png")
                     self.set_target_card = 0
                     print(swap_target_name)
 
@@ -547,7 +547,13 @@ class Group(Drag):
                 front_img = load_image(card_name, CARD_SIZE)
                 x = self.item_x + CARD_SIZE[0] / 2 + 35 + step * SPREAD_SPACING
                 y = self.item_y + CARD_SIZE[1] / 2
-                self.spawn_card(front_img, card_name, x, y, face_up=self.face_up)
+
+                if self.face_up != None:
+                    face = self.face_up
+                else:
+                    face = random.choice([True, False])
+
+                self.spawn_card(front_img, card_name, x, y, face_up=face)
                 self.canva.after(50, lambda s=step + 1: generate_next(s))
             else:
                 self.box.spreading = False
@@ -918,9 +924,17 @@ def on_leave(event):
         g.reset_wave()
 
 
-def set_target(card_name):
+def set_target(target_name):
     global swap_target_name
-    swap_target_name = card_name
+    swap_target_name = target_name
+    for card in focus_box.used_card:  # type: ignore
+        if card.card_name == target_name:
+            card.face_up = False
+            card.canva.itemconfig(
+                card.this_card,
+                image=card.front_img if card.face_up else card.back_img,
+            )
+            return
 
 
 def key_pressed(event):
@@ -950,17 +964,6 @@ def key_pressed(event):
         func()
         return
 
-    if key == "a":
-        if ctrl and shift:
-            set_target("spade-(1).png")
-            return
-        elif ctrl:
-            set_target(focus_card.card_name)  # type: ignore
-            return
-        elif shift:
-            set_target(None)
-            return
-
     if not focus_box:
         return
 
@@ -983,7 +986,7 @@ def key_pressed(event):
         )
         return
 
-    special_map = {
+    sequence_map = {
         "1": "si_stebbins",
         "2": "eight_kings",
         "3": "color_mirror",
@@ -994,14 +997,34 @@ def key_pressed(event):
         "dollar": "number_mirror",
         "q": "color_number_mirror",
     }
-    if key in special_map:
-        stack_type = special_map[key]
+    if key in sequence_map:
+        stack_type = sequence_map[key]
         if ctrl:
             focus_box.spawn_spread(  # type: ignore
                 group="all",
                 sort=stack_type,
                 delete_used=True,
                 face_up=shift,
+            )
+            return
+
+    if key == "a":
+        if ctrl and shift:
+            set_target("spade-(1).png")
+            return
+        elif ctrl:
+            set_target(focus_card.card_name)  # type: ignore
+            return
+        elif shift:
+            set_target(None)
+            return
+    elif key == "q":
+        if shift:
+            focus_box.spawn_spread(
+                group="all",
+                sort="random",
+                delete_used=True,
+                face_up=None,
             )
             return
 
