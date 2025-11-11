@@ -131,7 +131,7 @@ pip install pillow
 
 <br>
 
-**Spread for Magical Effect**
+**Spread for Magical Effect:**
 | Key | Action |
 |-----|--------|
 | `Shift + Q` | Span a randomly faced-up-or-down** spread with all cards. |
