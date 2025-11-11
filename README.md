@@ -118,6 +118,17 @@ pip install pillow
 | `K`   | Spawn four **Kings** |
 | `L`   | Spawn two **Jokers** |
 
+<br>
+
+**Secretly swapping cards:**
+| Key | Action |
+|-----|--------|
+| `Ctrl + Shift + A` | Swap target become **Aces of Spade** |
+| `Ctrl + A`         | Swap target become **target card** |
+| `Shift + A`        | No swap target |
+
+*(The card swap occurred when a face-down card was **turned face up**.)*
+
 ---
 
 ### [Mouse]
@@ -147,6 +158,7 @@ Right-click and drag to move an item.
 - Use the card spread to let the spectator pick a random card.
 - Keep the cards visible on screen to help magician remember the spectator’s card or your prediction.
 - Through the stack system, the magician can identify the spectator’s card or determine its position in the deck.
+- Using a secret card-swap method, the magician ensures the spectator always chooses the target card.
 
 <br>
 
