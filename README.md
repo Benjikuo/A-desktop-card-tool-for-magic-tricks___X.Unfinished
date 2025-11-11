@@ -136,7 +136,7 @@ pip install pillow
 |-----|--------|
 | `Shift + Q` | Span a randomly faced-up-or-down** spread with all cards. |
 
-*(The **last card** will always **face up*. Press Ctrl + Shift + F to secretly invert the face-down cards in **stack**.)*
+*(The **last card** will always **face up**. Press Ctrl + Shift + F to secretly invert the face-down cards in **stack**.)*
 
 ---
 
