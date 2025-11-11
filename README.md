@@ -129,6 +129,8 @@ pip install pillow
 
 *(The card swap occurred when a face-down card was **turned face up**.)*
 
+<br>
+
 **Spread for Magical Effect**
 | Key | Action |
 |-----|--------|
