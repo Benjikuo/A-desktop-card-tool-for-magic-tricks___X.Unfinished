@@ -550,6 +550,8 @@ class Group(Drag):
 
                 if self.face_up != None:
                     face = self.face_up
+                elif not self.available:
+                    face = True
                 else:
                     face = random.choice([True, False])
 
