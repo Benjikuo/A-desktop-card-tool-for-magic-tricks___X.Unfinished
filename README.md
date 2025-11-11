@@ -80,14 +80,14 @@ pip install pillow
 **Create a Card Spread:**
 | Key | Action |
 |-----|--------|
-| `W` | Spawn an **unstored** card spread with all cards |
-| `S` | Spawn a **stored** card spread with all cards |
-| `Z` | Spawn a stored card spread with all **spade** cards |
-| `X` | Spawn a stored card spread with all **diamond** cards |
-| `C` | Spawn a stored card spread with all **club** cards |
-| `V` | Spawn a stored card spread with all **heart** cards |
-| `G` | Spawn a stored card spread with all **red** cards |
-| `B` | Spawn a stored card spread with all **black** cards |
+| `W`         | Spawn an **unstored** card spread with all cards |
+| `S`         | Spawn a **stored** card spread with all cards |
+| `Z`         | Spawn a stored card spread with all **spade** cards |
+| `X`         | Spawn a stored card spread with all **diamond** cards |
+| `C`         | Spawn a stored card spread with all **club** cards |
+| `V`         | Spawn a stored card spread with all **heart** cards |
+| `G`         | Spawn a stored card spread with all **red** cards |
+| `B`         | Spawn a stored card spread with all **black** cards |
 
 *(**+Ctrl:** delete used cards, **+Shift:** face-up)*
 
@@ -123,11 +123,18 @@ pip install pillow
 **Secretly swapping cards:**
 | Key | Action |
 |-----|--------|
-| `Ctrl + Shift + A` | Swap target become **Aces of Spade** |
 | `Ctrl + A`         | Swap target become **target card** |
 | `Shift + A`        | No swap target |
+| `Ctrl + Shift + A` | Swap target become **Aces of Spade** |
 
 *(The card swap occurred when a face-down card was **turned face up**.)*
+
+**Spread for Magical Effect**
+| Key | Action |
+|-----|--------|
+| `Shift + Q` | Span a randomly faced-up-or-down** spread with all cards. |
+
+*(The **last card** will always **face up*. Press Ctrl + Shift + F to secretly invert the face-down cards in **stack**.)*
 
 ---
 
