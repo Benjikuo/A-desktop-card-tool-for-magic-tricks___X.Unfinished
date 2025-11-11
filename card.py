@@ -16,6 +16,7 @@ focus_box = None
 focus_group = None
 focus_card = None
 list_card = None
+swap_target = None
 
 
 class Drag:
@@ -717,8 +718,13 @@ class Card(Drag):
         animate_up(0)
 
     def flip(self, event=None):
+        global swap_target
         if self.flipping:
             return
+
+        if self.face_up == False and swap_target:
+            self.swap_with(swap_target)
+            swap_target = None
 
         if self.in_spread:
             self.in_spread = False
@@ -771,6 +777,25 @@ class Card(Drag):
 
         self.canva.delete(self.this_card)
         del self
+
+    def swap_with(self, target_name):
+        for card in self.box.used_card:
+            if card.card_name == target_name:
+                self.front_img, card.front_img = card.front_img, self.front_img
+                self.card_name, card.card_name = card.card_name, self.card_name
+
+                self.canva.itemconfig(
+                    self.this_card,
+                    image=self.front_img if self.face_up else self.back_img,
+                )
+                self.canva.itemconfig(
+                    card.this_card,
+                    image=card.front_img if card.face_up else card.back_img,
+                )
+                print(f"🃏 Swapped {self.card_name} ↔ {card.card_name}")
+                return
+
+        print(f"⚠️ Target card {target_name} not found.")
 
 
 def no_card(canva, x, y):
@@ -825,8 +850,13 @@ def on_leave(event):
         g.reset_wave()
 
 
+def set_target(card_name):
+    global swap_target
+    swap_target = card_name
+
+
 def key_pressed(event):
-    global focus_box, focus_group, focus_card
+    global focus_box, focus_group, focus_card, swap_target
     key = event.keysym.lower()
     ctrl = (event.state & 0x4) != 0
     shift = (event.state & 0x1) != 0
@@ -838,7 +868,6 @@ def key_pressed(event):
         actions |= {"d": focus_card.delete, "f": focus_card.flip}
     if ctrl:
         actions |= {"r": root.destroy}
-
         if focus_group:
             actions |= {
                 "e": focus_group.stack,
@@ -846,15 +875,23 @@ def key_pressed(event):
                 "f": focus_group.flip_all,
             }
         if shift:
-            actions |= {
-                "d": delete_all_cards,
-                "f": flip_all_cards,
-            }
+            actions |= {"d": delete_all_cards, "f": flip_all_cards}
 
     func = actions.get(key)
     if func:
         func()
         return
+
+    if key == "a":
+        if ctrl and shift:
+            set_target("spade-(1).png")
+            return
+        elif ctrl:
+            set_target(focus_card.card_name)  # type: ignore
+            return
+        elif shift:
+            set_target(None)
+            return
 
     if not focus_box:
         return
