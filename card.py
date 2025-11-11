@@ -16,7 +16,7 @@ focus_box = None
 focus_group = None
 focus_card = None
 list_card = None
-swap_target = None
+swap_target_name = None
 
 
 class Drag:
@@ -326,6 +326,8 @@ class Group(Drag):
         self.stacking = False
         self.stacked = False
         self.drag_box = None
+        self.set_target_card = 0
+        self.target_suit = ""
 
         self.left_click = self.flip_all
         self.middle_click = self.delete_group
@@ -429,6 +431,7 @@ class Group(Drag):
         self.spread()
 
     def dragging(self, state):
+        global swap_target_name
         if state:
             for c in self.group_cards:
                 x = c.item_x + self.dx
@@ -462,6 +465,71 @@ class Group(Drag):
         else:
             self.canva.delete(self.drag_box)
             self.drag_box = None
+
+            if self.item_y < 335:
+                self.target_suit = ""
+                swap_target_name = None
+                self.set_target_card = 1
+                print("🟥 set_target_card")
+
+            if self.set_target_card == 1:
+                up, down = 335, 825
+                if self.item_y > up and self.item_y < down and self.item_x < 330:
+                    block = (down - up) / 6
+                    if self.item_y < up + block:
+                        self.target_suit = "spade"
+                        self.set_target_card = 2
+                    elif self.item_y < up + block * 2:
+                        self.target_suit = "diamond"
+                        self.set_target_card = 2
+                    elif self.item_y < up + block * 3:
+                        self.target_suit = "club"
+                        self.set_target_card = 2
+                    elif self.item_y < up + block * 4:
+                        self.target_suit = "heart"
+                        self.set_target_card = 2
+                    elif self.item_y < up + block * 5:
+                        swap_target_name = "joker-(1).png"
+                        self.set_target_card = 0
+                    else:
+                        swap_target_name = "joker-(2).png"
+                        self.set_target_card = 0
+                    print(self.target_suit, swap_target_name)
+
+            if self.set_target_card == 2:
+                up, down = 410, 825
+                left, right = 330, 580
+                if (
+                    self.item_y > up
+                    and self.item_y < down
+                    and self.item_x > left
+                    and self.item_x < right
+                ):
+                    block_x = (right - left) / 3
+                    block_y = (down - up) / 5
+
+                    n = 0
+                    if self.item_y < up + block_y:
+                        swap_target_name = self.target_suit + "-(13).png"
+                        print("13")
+                        return
+                    elif self.item_y < up + block_y * 2:
+                        n += 9
+                    elif self.item_y < up + block_y * 3:
+                        n += 6
+                    elif self.item_y < up + block_y * 4:
+                        n += 3
+
+                    if self.item_x < left + block_x:
+                        n += 1
+                    elif self.item_x < left + block_x * 2:
+                        n += 2
+                    else:
+                        n += 3
+
+                    swap_target_name = self.target_suit + "-(" + str(n) + ").png"
+                    self.set_target_card = 0
+                    print(swap_target_name)
 
         self.moving = state
 
@@ -718,13 +786,13 @@ class Card(Drag):
         animate_up(0)
 
     def flip(self, event=None):
-        global swap_target
+        global swap_target_name
         if self.flipping:
             return
 
-        if self.face_up == False and swap_target:
-            self.swap_with(swap_target)
-            swap_target = None
+        if self.face_up == False and swap_target_name:
+            self.swap_with(swap_target_name)
+            swap_target_name = None
 
         if self.in_spread:
             self.in_spread = False
@@ -851,12 +919,12 @@ def on_leave(event):
 
 
 def set_target(card_name):
-    global swap_target
-    swap_target = card_name
+    global swap_target_name
+    swap_target_name = card_name
 
 
 def key_pressed(event):
-    global focus_box, focus_group, focus_card, swap_target
+    global focus_box, focus_group, focus_card, swap_target_name
     key = event.keysym.lower()
     ctrl = (event.state & 0x4) != 0
     shift = (event.state & 0x1) != 0
