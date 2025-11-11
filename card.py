@@ -466,6 +466,7 @@ class Group(Drag):
             self.canva.delete(self.drag_box)
             self.drag_box = None
 
+            print(f"🃏 {self.item_x}, {self.item_y}")
             if self.item_y < 335:
                 self.target_suit = ""
                 swap_target_name = None
@@ -473,8 +474,8 @@ class Group(Drag):
                 print("🟥 set_target_card")
 
             if self.set_target_card == 1:
-                up, down = 335, 825
-                if self.item_y > up and self.item_y < down and self.item_x < 330:
+                up, down = 335, 660
+                if self.item_y > up and self.item_y < down and self.item_x < 255:
                     block = (down - up) / 6
                     if self.item_y < up + block:
                         self.target_suit = "spade"
@@ -485,20 +486,14 @@ class Group(Drag):
                     elif self.item_y < up + block * 3:
                         self.target_suit = "club"
                         self.set_target_card = 2
-                    elif self.item_y < up + block * 4:
+                    else:
                         self.target_suit = "heart"
                         self.set_target_card = 2
-                    elif self.item_y < up + block * 5:
-                        set_target("joker-(1).png")
-                        self.set_target_card = 0
-                    else:
-                        set_target("joker-(2).png")
-                        self.set_target_card = 0
-                    print(self.target_suit, swap_target_name)
+                    print(self.target_suit)
 
             if self.set_target_card == 2:
                 up, down = 410, 825
-                left, right = 330, 580
+                left, right = 250, 500
                 if (
                     self.item_y > up
                     and self.item_y < down
@@ -510,9 +505,7 @@ class Group(Drag):
 
                     n = 0
                     if self.item_y < up + block_y:
-                        swap_target_name = self.target_suit + "-(13).png"
-                        print("13")
-                        return
+                        n += 12
                     elif self.item_y < up + block_y * 2:
                         n += 9
                     elif self.item_y < up + block_y * 3:
@@ -527,7 +520,12 @@ class Group(Drag):
                     else:
                         n += 3
 
-                    set_target(self.target_suit + "-(" + str(n) + ").png")
+                    if n == 14:
+                        set_target("joker-(1).png")
+                    elif n == 15:
+                        set_target("joker-(2).png")
+                    else:
+                        set_target(self.target_suit + "-(" + str(n) + ").png")
                     self.set_target_card = 0
                     print(swap_target_name)
 
