@@ -467,7 +467,7 @@ class Group(Drag):
             self.drag_box = None
 
             print(f"🃏 {self.item_x}, {self.item_y}")
-            if self.item_y < 335:
+            if self.item_y < 335 and self.item_x < 295:
                 self.target_suit = ""
                 swap_target_name = None
                 self.set_target_card = 1
