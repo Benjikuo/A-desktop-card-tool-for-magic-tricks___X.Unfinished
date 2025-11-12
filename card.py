@@ -474,9 +474,9 @@ class Group(Drag):
                 print("🟥 set_target_card")
 
             if self.set_target_card == 1:
-                up, down = 335, 660
-                if self.item_y > up and self.item_y < down and self.item_x < 255:
-                    block = (down - up) / 6
+                up, down = 295, 610
+                if self.item_y > up and self.item_y < down and self.item_x < 295:
+                    block = (down - up) / 4
                     if self.item_y < up + block:
                         self.target_suit = "spade"
                         self.set_target_card = 2
@@ -492,8 +492,8 @@ class Group(Drag):
                     print(self.target_suit)
 
             if self.set_target_card == 2:
-                up, down = 410, 825
-                left, right = 250, 500
+                up, down = 455, 870
+                left, right = 295, 550
                 if (
                     self.item_y > up
                     and self.item_y < down
