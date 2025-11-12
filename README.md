@@ -127,7 +127,7 @@ pip install pillow
 | `Shift + A`        | No swap target |
 | `Ctrl + Shift + A` | Swap target become **Aces of Spade** |
 
-*(The card swap occurred when a face-down card was **turned face up**.)*
+*(The **target card will face down**. The card swap occurred when another face-down card is **turned face up**.)*
 
 <br>
 
