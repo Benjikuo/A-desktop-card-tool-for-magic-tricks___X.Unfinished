@@ -173,7 +173,7 @@ Right-click and drag to move an item.
 <br>
 
 ## 📜 License
-This project is released under the MIT License.  
+This project is released under the **MIT License**.  
 You are free to modify and use it for learning, personal, or performance purposes.  
 
 **Making this program work felt like a miracle to me — now it’s your turn to make the magic happen.**
