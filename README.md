@@ -27,7 +27,7 @@ This is a program that allows a magician to select a random or specific card on 
 
 ## 📂 Project Structure  
 ```
-Desktop Card/
+A-desktop-card-tool-for-magic-tricks/
 ├── image/
 │   ├── button/           # Button graphics
 │   ├── card/             # Card and box graphics
