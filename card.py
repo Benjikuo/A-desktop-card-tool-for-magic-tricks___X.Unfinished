@@ -869,7 +869,14 @@ class Card(Drag):
                 print(f"🃏 Swapped {self.card_name} ↔ {card.card_name}")
                 return
 
-        print(f"⚠️ Target card {target_name} not found.")
+        self.front_img = load_image(target_name, CARD_SIZE)
+        self.box.return_card(self.card_name, self)
+        self.card_name = target_name
+        self.canva.itemconfig(
+            self.this_card,
+            image=self.front_img,
+        )
+        self.box.take_card(self.card_name, self)
 
 
 def no_card(canva, x, y):
