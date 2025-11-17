@@ -123,9 +123,9 @@ pip install pillow
 **Secretly swapping cards:**
 | Key | Action |
 |-----|--------|
-| `Ctrl + A`         | Swap target become **target card** |
-| `Shift + A`        | No swap target |
-| `Ctrl + Shift + A` | Swap target become **Aces of Spade** |
+| `Ctrl + A`         | Swap-target become **target card** |
+| `Shift + A`        | No swap-target |
+| `Ctrl + Shift + A` | Swap-target become **Aces of Spade** |
 
 *(The **target card will face down**. The card swap occurred when another face-down card is **turned face up**.)*
 
